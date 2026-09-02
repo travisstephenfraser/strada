@@ -23,6 +23,10 @@ export default defineConfig({
   },
 
   server: {
-    port: 5173,
+    // 5173 is in use by another project on this machine. strictPort makes Vite fail
+    // rather than silently pick a different port — a moved port breaks the API's CORS
+    // allowlist and Neon's trusted origins, and presents as an auth bug.
+    port: 5177,
+    strictPort: true,
   },
 });

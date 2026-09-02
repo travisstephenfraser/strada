@@ -7,7 +7,7 @@ import type { ApiConfig } from "../src/env.js";
 const config: ApiConfig = {
   authBaseUrl: "https://auth.example.test/neondb/auth",
   dataApiUrl: "https://data.example.test/neondb/rest/v1",
-  webOrigins: ["http://localhost:5173"],
+  webOrigins: ["http://localhost:5177"],
   issuer: undefined,
   audience: undefined,
   port: 0,

@@ -155,7 +155,7 @@ npm run migrate                # applies db/migrations/*.sql
 npm test                       # hermetic suite — no credentials needed
 
 npm run dev:api                # http://localhost:3001
-npm run dev:web                # http://localhost:5173
+npm run dev:web                # http://localhost:5177
 ```
 
 ## Environment variables

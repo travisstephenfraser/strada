@@ -42,7 +42,7 @@ export function loadConfig(): ApiConfig {
   return {
     authBaseUrl: required("NEON_AUTH_BASE_URL"),
     dataApiUrl: required("NEON_DATA_API_URL"),
-    webOrigins: (process.env.WEB_ORIGIN ?? "http://localhost:5173")
+    webOrigins: (process.env.WEB_ORIGIN ?? "http://localhost:5177")
       .split(",")
       .map((origin) => origin.trim().replace(/\/+$/, ""))
       .filter(Boolean),
