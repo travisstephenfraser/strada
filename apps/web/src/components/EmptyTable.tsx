@@ -11,12 +11,19 @@ import { ContactRow } from "@/components/ContactRow";
  * the brass spine at all three lengths, which is why the encoding needs no legend
  * anywhere in the app. The rows are aria-hidden, non-interactive, and never touch the
  * database, so they cannot contaminate a CRUD demo or the two-account privacy test.
+ *
+ * These names MUST NOT match any contact used in a demo or a screenshot. An earlier
+ * version reused the demo contacts' names here, which made the two-account privacy
+ * check read as a failure: signed in as the second user, the empty state showed the
+ * first user's contact names. The data was correct — the API returned nothing and the
+ * rows were aria-hidden decoration — but evidence that has to be explained is not
+ * evidence. Keep this cast disjoint from anything real.
  */
 const PHANTOMS: Contact[] = [
   {
     id: "ghost-1",
     user_id: "",
-    name: "Priya Raman",
+    name: "Ana Beltrán",
     company: "Anthropic",
     role: "Research",
     met_where: "Sutardja Center mixer",
@@ -28,7 +35,7 @@ const PHANTOMS: Contact[] = [
   {
     id: "ghost-2",
     user_id: "",
-    name: "Dana Whitfield",
+    name: "Wes Nakamura",
     company: "Stripe",
     role: "Engineering manager",
     met_where: "referred by Priya",
@@ -40,7 +47,7 @@ const PHANTOMS: Contact[] = [
   {
     id: "ghost-3",
     user_id: "",
-    name: "Sam Osei",
+    name: "Joy Okafor",
     company: "Berkeley SkyDeck",
     role: "Program associate",
     met_where: "Tuesday office hours",
