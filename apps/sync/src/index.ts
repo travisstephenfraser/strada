@@ -3,6 +3,7 @@ import type { WikiRecord } from "@strada/shared";
 import { DEFAULT_POLICY, applyVisibility, readEntities } from "./vault.js";
 import { ExtractionError, extractOne, toRecord } from "./extract.js";
 import { pushRecords, signIn, type StradaConfig } from "./client.js";
+import { resolvePassword } from "./credentials.js";
 import { renderReport } from "./report.js";
 
 /**
@@ -55,13 +56,17 @@ async function main(): Promise<void> {
   const opts = parseArgs(process.argv.slice(2));
 
   const vaultPath = required("STRADA_VAULT_PATH");
+  const email = required("STRADA_SYNC_EMAIL");
+  // Keychain first, then a prompt, then the environment. See credentials.ts.
+  const { password, source } = await resolvePassword(email);
   const strada: StradaConfig = {
     authUrl: required("NEON_AUTH_BASE_URL"),
     apiUrl: required("STRADA_API_URL"),
-    email: required("STRADA_SYNC_EMAIL"),
-    password: required("STRADA_SYNC_PASSWORD"),
+    email,
+    password,
     origin: process.env.STRADA_SYNC_ORIGIN ?? "http://localhost:5177",
   };
+  console.log(`Signing in as ${email} (password from ${source}).`);
   const lmBaseUrl = process.env.STRADA_LMSTUDIO_URL ?? "http://localhost:1234/v1";
 
   console.log(`Reading ${vaultPath} (read-only)…`);

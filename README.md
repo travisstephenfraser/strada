@@ -592,10 +592,23 @@ first answer looked exactly like the second.
 
 ### Setup
 
-Needs `STRADA_VAULT_PATH`, `STRADA_API_URL`, `STRADA_SYNC_EMAIL`,
-`STRADA_SYNC_PASSWORD` in `.env.local` (gitignored), and LM Studio running locally with
-a model loaded. If the model is unreachable the CLI **exits non-zero** rather than
-writing a degraded sync that looks like a successful one.
+```bash
+npm run sync:login    # once — verifies the password, then stores it in the keychain
+npm run sync          # thereafter
+```
+
+Needs `STRADA_VAULT_PATH`, `STRADA_API_URL` and `STRADA_SYNC_EMAIL` in `.env.local`
+(gitignored), and LM Studio running locally with a model loaded.
+
+**The password is not one of them.** It is a real account credential — it can read and
+change every contact the account owns — so it is resolved from the macOS keychain first,
+then an interactive prompt, and only last from `STRADA_SYNC_PASSWORD`, which prints a
+warning because it means a live password is sitting in plaintext on disk.
+`sync:login` verifies the password against Neon Auth before storing it, so a typo fails
+there rather than silently at the next sync.
+
+If the model is unreachable the CLI **exits non-zero** rather than writing a degraded
+sync that looks like a successful one.
 
 No vault path or vault content is committed. Tests run against a synthetic fixture vault
 of invented people, and a test fails if any source file contains a vault path.

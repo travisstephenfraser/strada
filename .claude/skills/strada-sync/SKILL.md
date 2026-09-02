@@ -19,6 +19,15 @@ npm run sync                # apply
 Useful flags: `--limit N` (try a few pages first), `--include-pii`,
 `--exclude-internal`, `--model <id>`.
 
+## First time only
+
+```bash
+npm run sync:login
+```
+
+Stores the password in the macOS keychain after verifying it. Never ask Travis to paste
+a password into the chat, and never write one into `.env.local`.
+
 ## Before running
 
 LM Studio must be running with a model loaded, or the CLI stops rather than writing a
