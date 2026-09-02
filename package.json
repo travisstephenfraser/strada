@@ -15,8 +15,8 @@
     "dev:api": "npm run dev --workspace @strada/api",
     "dev:web": "npm run dev --workspace @strada/web",
     "build": "npm run build:shared && npm run build --workspace @strada/web && npm run build --workspace @strada/api",
-    "test": "npm run build:shared && vitest run --reporter=verbose",
-    "test:rls": "npm run build:shared && vitest run --config vitest.rls.config.ts --reporter=verbose",
+    "test": "npm run build:shared && vitest run --config vitest.config.mts --reporter=verbose",
+    "test:rls": "npm run build:shared && node --env-file-if-exists=.env.local ./node_modules/vitest/vitest.mjs run --config vitest.rls.config.mts --reporter=verbose",
     "migrate": "node db/migrate.mjs",
     "check:secrets": "bash scripts/check-no-secrets.sh"
   },

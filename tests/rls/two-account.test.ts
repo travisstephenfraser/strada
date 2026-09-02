@@ -1,0 +1,240 @@
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
+
+/**
+ * Proof that User A cannot see or change User B's contacts.
+ *
+ * Design notes, because the obvious version of this test does not test anything:
+ *
+ * 1. It runs over HTTP against the deployed Neon Data API, using tokens obtained by
+ *    actually signing in. An earlier design connected with `pg` and DATABASE_URL —
+ *    but that connects as the table OWNER, and in Postgres an owner bypasses RLS
+ *    unless FORCE ROW LEVEL SECURITY is set. That version would have gone green with
+ *    the policies deleted. Testing the real path also covers things a direct
+ *    connection cannot see at all: JWKS verification, the exposed schema, and grants.
+ *
+ * 2. B's reads are UNFILTERED. A `where user_id = B` would quietly do RLS's job for
+ *    it, and the test would pass with RLS switched off.
+ *
+ * 3. The positive control matters but is not the strongest anchor. "B sees 0 rows"
+ *    passes identically whether RLS is working or whether the request is denied
+ *    everything — so asserting that A CAN read their own row separates those. The
+ *    real anchors are the two WITH CHECK assertions, which fail loudly if the
+ *    ownership rule is absent rather than merely over-restrictive.
+ *
+ * 4. It throws rather than skips when unconfigured. See vitest.rls.config.ts.
+ */
+
+interface Env {
+  authUrl: string;
+  dataApiUrl: string;
+  a: { email: string; password: string };
+  b: { email: string; password: string };
+}
+
+function loadEnv(): Env {
+  const required = [
+    "NEON_AUTH_BASE_URL",
+    "NEON_DATA_API_URL",
+    "RLS_TEST_A_EMAIL",
+    "RLS_TEST_A_PASSWORD",
+    "RLS_TEST_B_EMAIL",
+    "RLS_TEST_B_PASSWORD",
+  ];
+  const missing = required.filter((key) => !process.env[key]);
+  if (missing.length > 0) {
+    throw new Error(
+      `npm run test:rls needs two real test accounts and cannot run without them.\n` +
+        `Missing: ${missing.join(", ")}\n` +
+        `This suite deliberately fails rather than skipping: a security test that ` +
+        `skips still prints as a pass, which is worse than no test at all.`,
+    );
+  }
+  return {
+    authUrl: process.env.NEON_AUTH_BASE_URL!.replace(/\/+$/, ""),
+    dataApiUrl: process.env.NEON_DATA_API_URL!.replace(/\/+$/, ""),
+    a: {
+      email: process.env.RLS_TEST_A_EMAIL!,
+      password: process.env.RLS_TEST_A_PASSWORD!,
+    },
+    b: {
+      email: process.env.RLS_TEST_B_EMAIL!,
+      password: process.env.RLS_TEST_B_PASSWORD!,
+    },
+  };
+}
+
+const env = loadEnv();
+
+/** Sign in for real and return the access token plus the user id RLS will compare. */
+async function signIn(creds: { email: string; password: string }) {
+  const res = await fetch(`${env.authUrl}/sign-in/email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Origin: "http://localhost:5177" },
+    body: JSON.stringify(creds),
+  });
+  if (!res.ok) {
+    throw new Error(`Could not sign in ${creds.email}: ${res.status} ${await res.text()}`);
+  }
+  const cookie = res.headers.getSetCookie?.().join("; ") ?? "";
+
+  const tokenRes = await fetch(`${env.authUrl}/token`, {
+    headers: { Cookie: cookie, Origin: "http://localhost:5177" },
+  });
+  if (!tokenRes.ok) {
+    throw new Error(`Could not mint a token: ${tokenRes.status} ${await tokenRes.text()}`);
+  }
+  const { token } = (await tokenRes.json()) as { token: string };
+  const claims = JSON.parse(
+    Buffer.from(token.split(".")[1]!, "base64url").toString(),
+  ) as { sub: string };
+  return { token, userId: claims.sub };
+}
+
+function data(token: string, path: string, init: RequestInit = {}) {
+  return fetch(`${env.dataApiUrl}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...(init.headers ?? {}),
+    },
+  });
+}
+
+let A: { token: string; userId: string };
+let B: { token: string; userId: string };
+let rowId: string;
+const MARKER = `rls-proof-${Date.now()}`;
+
+beforeAll(async () => {
+  [A, B] = await Promise.all([signIn(env.a), signIn(env.b)]);
+  expect(A.userId, "the two accounts must be different users").not.toBe(B.userId);
+
+  const res = await data(A.token, "/contacts", {
+    method: "POST",
+    headers: { Prefer: "return=representation" },
+    body: JSON.stringify({
+      name: MARKER,
+      company: "Owned by A",
+      priority: "high",
+      user_id: A.userId,
+    }),
+  });
+  expect(res.status, `A should be able to create their own row: ${await res.clone().text()}`).toBe(201);
+  const [row] = (await res.json()) as { id: string }[];
+  rowId = row!.id;
+});
+
+afterAll(async () => {
+  if (rowId) await data(A.token, `/contacts?id=eq.${rowId}`, { method: "DELETE" });
+});
+
+describe("User A's row, as seen by User A (positive control)", () => {
+  // Without this, "B sees nothing" would pass just as well if the database were
+  // denying everyone everything.
+  it("A can read the row A created", async () => {
+    const res = await data(A.token, `/contacts?id=eq.${rowId}`);
+    expect(res.status).toBe(200);
+    const rows = (await res.json()) as { name: string; user_id: string }[];
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.name).toBe(MARKER);
+    expect(rows[0]!.user_id).toBe(A.userId);
+  });
+});
+
+describe("User B cannot SEE User A's contacts", () => {
+  it("B's unfiltered read of the whole table does not contain A's row", async () => {
+    // No filter at all: any WHERE clause here would be the test doing RLS's job.
+    const res = await data(B.token, "/contacts");
+    expect(res.status).toBe(200);
+    const rows = (await res.json()) as { id: string; user_id: string }[];
+    expect(rows.map((r) => r.id)).not.toContain(rowId);
+    expect(rows.every((r) => r.user_id === B.userId)).toBe(true);
+  });
+
+  it("B cannot read A's row even when asking for it by id", async () => {
+    const res = await data(B.token, `/contacts?id=eq.${rowId}`);
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([]);
+  });
+});
+
+describe("User B cannot CHANGE User A's contacts", () => {
+  it("B's update of A's row affects nothing", async () => {
+    const res = await data(B.token, `/contacts?id=eq.${rowId}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ name: "hijacked by B" }),
+    });
+    expect([200, 204]).toContain(res.status);
+    if (res.status === 200) expect(await res.json()).toEqual([]);
+
+    const check = await data(A.token, `/contacts?id=eq.${rowId}`);
+    const [row] = (await check.json()) as { name: string }[];
+    expect(row!.name, "A's row must be untouched").toBe(MARKER);
+  });
+
+  it("B's delete of A's row removes nothing", async () => {
+    const res = await data(B.token, `/contacts?id=eq.${rowId}`, {
+      method: "DELETE",
+      headers: { Prefer: "return=representation" },
+    });
+    expect([200, 204]).toContain(res.status);
+    if (res.status === 200) expect(await res.json()).toEqual([]);
+
+    const check = await data(A.token, `/contacts?id=eq.${rowId}`);
+    expect((await check.json()) as unknown[], "A's row must still exist").toHaveLength(1);
+  });
+
+  it("B's unfiltered delete cannot reach A's rows", async () => {
+    // The blast radius of an unfiltered write is bounded by RLS to B's own rows.
+    await data(B.token, "/contacts", { method: "DELETE" });
+    const check = await data(A.token, `/contacts?id=eq.${rowId}`);
+    expect((await check.json()) as unknown[]).toHaveLength(1);
+  });
+});
+
+describe("Ownership cannot be handed to another user (WITH CHECK)", () => {
+  // These are the assertions that fail if the ownership rule is missing rather than
+  // merely over-restrictive, which is why they are the suite's real anchor.
+  it("A cannot create a row owned by B", async () => {
+    const res = await data(A.token, "/contacts", {
+      method: "POST",
+      body: JSON.stringify({
+        name: `${MARKER}-planted`,
+        priority: "low",
+        user_id: B.userId,
+      }),
+    });
+    expect(res.status, "INSERT ... WITH CHECK must reject this").toBe(403);
+    expect((await res.json()).code).toBe("42501");
+  });
+
+  it("A cannot move their own row to B", async () => {
+    const res = await data(A.token, `/contacts?id=eq.${rowId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ user_id: B.userId }),
+    });
+    expect(res.status, "UPDATE ... WITH CHECK must reject this").toBe(403);
+    expect((await res.json()).code).toBe("42501");
+
+    const check = await data(A.token, `/contacts?id=eq.${rowId}`);
+    const [row] = (await check.json()) as { user_id: string }[];
+    expect(row!.user_id).toBe(A.userId);
+  });
+});
+
+describe("An unauthenticated caller reaches nothing", () => {
+  it("the Data API refuses a request with no token", async () => {
+    const res = await fetch(`${env.dataApiUrl}/contacts`);
+    expect(res.ok).toBe(false);
+  });
+
+  it("the Data API refuses a forged token", async () => {
+    const res = await fetch(`${env.dataApiUrl}/contacts`, {
+      headers: { Authorization: "Bearer not.a.realtoken" },
+    });
+    expect(res.ok).toBe(false);
+  });
+});
