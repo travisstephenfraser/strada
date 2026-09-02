@@ -38,7 +38,7 @@ const PHANTOMS: Contact[] = [
     name: "Wes Nakamura",
     company: "Stripe",
     role: "Engineering manager",
-    met_where: "referred by Priya",
+    met_where: "referred by Ana",
     notes: null,
     priority: "medium",
     created_at: "",
