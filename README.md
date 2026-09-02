@@ -137,7 +137,32 @@ _Full column table and the RLS narrative: see [`db/migrations/001_contacts.sql`]
 
 ## Authentication and RLS ownership
 
-_Pending Phase 2 — including the decoded-token evidence for which claims are pinned._
+Neon Managed Better Auth issues the access token; Postgres RLS reads its `sub` claim
+through `auth.user_id()` and compares it to `contacts.user_id`. That comparison is the
+entire ownership rule, and it runs inside the database on every statement.
+
+**Token facts, decoded from a live token rather than taken from documentation** (the
+docs are ambiguous on two of these, and guessing wrong fails closed in a way that looks
+like a broken app):
+
+| Property | Value | Why it matters |
+|---|---|---|
+| `alg` | `EdDSA` (Ed25519) | Not the RS256 most examples assume. `jwtVerify` pins `algorithms: ["EdDSA"]`. |
+| `iss` / `aud` | both present, both the auth **origin** | Both are pinned. The origin has no path, unlike the auth base URL. |
+| JWKS URL | `${NEON_AUTH_BASE_URL}/.well-known/jwks.json` | Keeps the `/<db>/auth` path. Resolving a root-relative path against the base URL silently drops it and 404s. |
+| `role` | `authenticated`, fixed | The Data API derives the Postgres role from this claim, so a user-settable value would be an escalation. Neon hard-sets it. |
+| Lifetime | **900 seconds** | See below. |
+
+**Tokens expire after 15 minutes, so the browser never caches one.** `getAccessToken()`
+asks the adapter for a current token on every request, and the adapter refreshes using an
+HttpOnly cookie held on the Neon Auth origin. A component that read a token off a session
+object captured in a render would hold a stale one and start failing every write about
+fifteen minutes in — which presents as a broken app rather than an expired session. The
+API client also retries once on a 401 to cover a token expiring in flight.
+
+Issuer pinning is verified rather than assumed: pointing a second API instance at a wrong
+issuer and replaying the *same* valid token returns 401, while the correctly configured
+instance returns 200.
 
 ## Secrets: publishable versus server-only
 

@@ -1,55 +1,28 @@
-import { PRIORITIES } from "@strada/shared";
+import { authClient } from "@/lib/auth";
+import SignIn from "@/pages/SignIn";
+import Contacts from "@/pages/Contacts";
 
 /**
- * Phase 0 placeholder.
+ * The whole routing story.
  *
- * It exists to prove the deploy pipeline end to end before any feature work: Tailwind v4
- * tokens resolve, the two variable fonts load, and — the one that actually bites on
- * Vercel — the `@strada/shared` workspace package resolves from a non-root root
- * directory. If this renders on the deployed URL, the monorepo wiring is sound.
+ * There are exactly two states — signed out and signed in — so this is a conditional
+ * rather than a router. Sort, filter and search live in the URL query string (added in
+ * Phase 4) which needs no route table either.
+ *
+ * The third state matters as much as the other two: while the session is still being
+ * resolved, render nothing rather than the sign-in screen. Otherwise every reload
+ * flashes a sign-in form at an already-authenticated person.
  */
 export default function App() {
-  return (
-    <main className="min-h-dvh bg-fog px-5 py-16">
-      <div className="mx-auto max-w-[880px]">
-        <h1 className="font-serif text-[2.5rem] leading-none font-medium text-ink">
-          Strada
-        </h1>
-        <p className="mt-2 text-meta text-ink-faint">
-          people you want to stay close to at Berkeley
-        </p>
+  const { data: session, isPending } = authClient.useSession();
 
-        <div className="mt-8 overflow-hidden rounded-[14px] border border-hairline bg-plate">
-          {PRIORITIES.map((priority) => (
-            <div
-              key={priority}
-              className="relative flex items-center justify-between border-b border-hairline px-5 py-3.5 last:border-b-0"
-            >
-              <span
-                aria-hidden="true"
-                className="absolute left-0 w-[3px] rounded-full bg-brass"
-                style={{
-                  height:
-                    priority === "high"
-                      ? "100%"
-                      : priority === "medium"
-                        ? "46%"
-                        : "14%",
-                }}
-              />
-              <span className="pl-4 font-serif text-name text-ink">
-                Priority spine, {priority}
-              </span>
-              <span className="eyebrow text-ink-faint">{priority}</span>
-            </div>
-          ))}
-        </div>
-
-        <p className="mt-6 text-meta text-ink-soft">
-          Phase 0 — scaffold deployed. Tokens, fonts and the shared validation package
-          all resolve.
-        </p>
+  if (isPending) {
+    return (
+      <div className="min-h-dvh bg-[var(--fog)]" aria-busy="true" aria-live="polite">
+        <span className="sr-only">Loading…</span>
       </div>
-    </main>
-  );
+    );
+  }
+
+  return session?.user ? <Contacts /> : <SignIn />;
 }
