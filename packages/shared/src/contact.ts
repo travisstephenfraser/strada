@@ -84,6 +84,14 @@ export interface Contact {
   priority: Priority;
   created_at: string;
   updated_at: string;
+
+  /* Optional wiki-sync bookkeeping (migration 002). Absent on hand-made contacts. */
+
+  /** Source wiki entity, e.g. "rosa-delgado". Null when created by hand in the app. */
+  wiki_slug?: string | null;
+  /** Fields a human edited here. Sync must never overwrite one of these. */
+  operator_set?: string[];
+  wiki_synced_at?: string | null;
 }
 
 /**

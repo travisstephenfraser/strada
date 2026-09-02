@@ -181,7 +181,12 @@ describe("upstream request shape", () => {
       .set(AUTH)
       .send({ priority: "low" });
 
-    const [url, init] = upstream.mock.calls[0]!;
+    // PATCH first READS the row so it can add the edited fields to operator_set
+    // without discarding earlier claims, so the write is the second upstream call.
+    const write = upstream.mock.calls.find(
+      ([, init]) => (init?.method ?? "GET") === "PATCH",
+    )!;
+    const [url, init] = write;
     expect(url).toBe(
       `https://data.example.test/neondb/rest/v1/contacts?id=eq.${ROW_ID}`,
     );

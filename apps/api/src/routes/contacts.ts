@@ -7,6 +7,7 @@ import {
   type Contact,
 } from "@strada/shared";
 import { DataApiClient, mapUpstreamError } from "../dataApi.js";
+import { claimedFields } from "./sync.js";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -94,12 +95,35 @@ export function createContactsRouter(dataApi: DataApiClient): Router {
       return;
     }
 
+    // Editing in the app claims those fields for the human: wiki sync will not
+    // overwrite them again. Read the current set first so a claim is additive rather
+    // than replacing what earlier edits established.
+    const before = await dataApi.request<Contact[]>({
+      token: req.accessToken!,
+      method: "GET",
+      table: "contacts",
+      filters: { id: `eq.${id}` },
+    });
+    if (before.error) {
+      const mapped = mapUpstreamError(before);
+      res.status(mapped.status).json(mapped.body);
+      return;
+    }
+    const existing = first(before.data);
+    if (!existing) {
+      res.status(404).json({ error: "Contact not found." });
+      return;
+    }
+    const operator_set = [
+      ...new Set([...(existing.operator_set ?? []), ...claimedFields(parsed.data)]),
+    ];
+
     const result = await dataApi.request<Contact[]>({
       token: req.accessToken!,
       method: "PATCH",
       table: "contacts",
       filters: { id: `eq.${id}` },
-      body: parsed.data,
+      body: { ...parsed.data, operator_set },
       // Belt to the path-parameter braces: if a filter ever matched more than one row,
       // PostgREST refuses the write rather than applying it.
       prefer: ["max-affected=1", "handling=strict"],

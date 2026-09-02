@@ -4,6 +4,7 @@ import type { ApiConfig } from "./env.js";
 import { createAuthMiddleware } from "./auth.js";
 import { DataApiClient } from "./dataApi.js";
 import { createContactsRouter } from "./routes/contacts.js";
+import { createSyncRouter } from "./routes/sync.js";
 
 export interface AppDeps {
   config: ApiConfig;
@@ -44,6 +45,8 @@ export function createApp({
   const dataApi = new DataApiClient(config.dataApiUrl, fetchImpl);
   const requireAuth = authMiddleware ?? createAuthMiddleware(config);
 
+  // Mounted before the contacts router so "/sync" is not read as a contact id.
+  app.use("/api/contacts/sync", requireAuth, createSyncRouter(dataApi));
   app.use("/api/contacts", requireAuth, createContactsRouter(dataApi));
 
   app.use((_req, res) => {
