@@ -1,0 +1,25 @@
+
+
+
+
+
+
+
+ RUN  v4.1.11 /Users/travis/Developer/pepeclass/assign1
+
+ ✓ tests/rls/two-account.test.ts > User A's row, as seen by User A (positive control) > A can read the row A created 31ms
+ ✓ tests/rls/two-account.test.ts > User B cannot SEE User A's contacts > B's unfiltered read of the whole table does not contain A's row 97ms
+ ✓ tests/rls/two-account.test.ts > User B cannot SEE User A's contacts > B cannot read A's row even when asking for it by id 31ms
+ ✓ tests/rls/two-account.test.ts > User B cannot CHANGE User A's contacts > B's update of A's row affects nothing 64ms
+ ✓ tests/rls/two-account.test.ts > User B cannot CHANGE User A's contacts > B's delete of A's row removes nothing 62ms
+ ✓ tests/rls/two-account.test.ts > User B cannot CHANGE User A's contacts > B's unfiltered delete cannot reach A's rows 88ms
+ ✓ tests/rls/two-account.test.ts > Ownership cannot be handed to another user (WITH CHECK) > A cannot create a row owned by B 32ms
+ ✓ tests/rls/two-account.test.ts > Ownership cannot be handed to another user (WITH CHECK) > A cannot move their own row to B 60ms
+ ✓ tests/rls/two-account.test.ts > An unauthenticated caller reaches nothing > the Data API refuses a request with no token 27ms
+ ✓ tests/rls/two-account.test.ts > An unauthenticated caller reaches nothing > the Data API refuses a forged token 29ms
+
+ Test Files  1 passed (1)
+      Tests  10 passed (10)
+   Start at  21:06:27
+   Duration  1.06s (transform 10ms, setup 0ms, import 14ms, tests 996ms, environment 0ms)
+

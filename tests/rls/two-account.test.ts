@@ -21,7 +21,11 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
  *    real anchors are the two WITH CHECK assertions, which fail loudly if the
  *    ownership rule is absent rather than merely over-restrictive.
  *
- * 4. It throws rather than skips when unconfigured. See vitest.rls.config.ts.
+ * 4. It throws rather than skips when unconfigured. See vitest.rls.config.mts.
+ *
+ * WARNING — this suite WRITES AND DELETES against whichever database it is pointed at.
+ * One assertion issues an unfiltered DELETE, which is harmless only while RLS is
+ * working. Point it at a branch you are willing to lose, never at anything real.
  */
 
 interface Env {
@@ -188,7 +192,25 @@ describe("User B cannot CHANGE User A's contacts", () => {
   });
 
   it("B's unfiltered delete cannot reach A's rows", async () => {
-    // The blast radius of an unfiltered write is bounded by RLS to B's own rows.
+    // DANGER: this is the one destructive assertion in the suite, and it is safe ONLY
+    // because RLS bounds an unfiltered DELETE to the caller's own rows. Run it against
+    // a database where RLS is off and it empties the whole table — which is exactly
+    // what happened once while deliberately disabling RLS to prove this suite could
+    // fail. The negative control destroyed the demo data it was run against.
+    //
+    // So the destructive step now refuses to run until isolation has been demonstrated
+    // on this very connection: if B can see A's row, RLS is not doing its job and an
+    // unfiltered delete must not be issued.
+    const probe = await data(B.token, `/contacts?id=eq.${rowId}`);
+    const visibleToB = (await probe.json()) as unknown[];
+    if (visibleToB.length !== 0) {
+      throw new Error(
+        "Refusing to issue an unfiltered DELETE: User B can see User A's row, so row " +
+          "level security is not in effect and this operation would delete every row " +
+          "in the table. Fix RLS before re-running.",
+      );
+    }
+
     await data(B.token, "/contacts", { method: "DELETE" });
     const check = await data(A.token, `/contacts?id=eq.${rowId}`);
     expect((await check.json()) as unknown[]).toHaveLength(1);
