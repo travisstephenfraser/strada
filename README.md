@@ -288,12 +288,22 @@ Three mechanisms keep that true rather than merely stated:
    `DATABASE_URL`, `postgresql://`, or a Postgres driver, and if any file under
    `apps/web/src` references a server-only variable name.
 3. **Scanned.** `npm run check:secrets` greps the built bundle for connection-string
-   literals and for the actual *values* of server-only variables, and fails if any `.env`
-   file other than `.env.example` is tracked in git.
+   literals and for the actual *values* of the secret variables, fails if any `.env` file
+   other than `.env.example` is tracked in git, and fails if a secret's value has been
+   copied into a `NEXT_PUBLIC_`/`VITE_` name — the mistake that would defeat mechanism 1
+   by making the value legitimately inlinable.
 
-That third check was rewritten after review. Its first version grepped the bundle for
-server-only *variable names* — which could never fail, because Vite inlines values, not
-identifiers. It passed unconditionally and proved nothing.
+That third check has been corrected twice, in opposite directions. Its first version
+grepped the bundle for server-only *variable names*, which could never fail, because Vite
+inlines values, not identifiers; it passed unconditionally and proved nothing. The
+value-based replacement then over-corrected: it treated `NEON_AUTH_BASE_URL` as a secret
+and demanded its absence from the bundle. That URL is the sign-in endpoint the browser has
+to call, shipped on purpose as `NEXT_PUBLIC_NEON_AUTH_URL` with the same value, so the
+check failed on a correct build. A check that cannot fail proves nothing; a check that
+fails when nothing is wrong gets skipped past, which comes to the same thing. The
+client-exposure check is what that list was reaching for, and it is verified in both
+directions — it passes on the real configuration and fails when a secret is deliberately
+pasted into a `NEXT_PUBLIC_` variable.
 
 ---
 
@@ -330,7 +340,7 @@ committed.
 |---|---|---|
 | `NEXT_PUBLIC_NEON_AUTH_URL` | web (public) | Neon Auth endpoint |
 | `NEXT_PUBLIC_API_BASE_URL` | web (public) | The Express deployment |
-| `NEON_AUTH_BASE_URL` | api (server-only) | JWKS discovery |
+| `NEON_AUTH_BASE_URL` | api | JWKS discovery. Not a secret: same value as `NEXT_PUBLIC_NEON_AUTH_URL`, which the browser needs |
 | `NEON_DATA_API_URL` | api (server-only) | Upstream PostgREST |
 | `NEON_AUTH_ISSUER` / `NEON_AUTH_AUDIENCE` | api (server-only) | Pinned JWT claims |
 | `WEB_ORIGIN` | api (server-only) | CORS allowlist |
@@ -472,8 +482,14 @@ build`, and `npm run check:secrets` on every push.
 ### No secret values committed
 
 `.gitignore` excludes every `.env` but `.env.example`; a test asserts that, and
-`npm run check:secrets` fails if a real `.env` is ever tracked or if a connection-string
-literal reaches the built bundle. Neither Vercel project holds `DATABASE_URL`.
+`npm run check:secrets` fails if a real `.env` is ever tracked, if a connection-string
+literal reaches the built bundle, or if a secret's value has been copied into a
+client-exposed variable name. Neither Vercel project holds `DATABASE_URL`.
+
+Git history was scanned before this repository was made public: every blob in every commit
+on every ref, checked both for credential patterns (`npg_`, `postgres://`, `sk-`, `ghp_`)
+and for the literal current values of `DATABASE_URL` and the two RLS test passwords. The
+only matches are the placeholder connection string in `.env.example`.
 
 ---
 
