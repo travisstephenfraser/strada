@@ -247,6 +247,37 @@ describe("Ownership cannot be handed to another user (WITH CHECK)", () => {
   });
 });
 
+describe("The wiki-sync columns do not weaken ownership", () => {
+  // Migration 002 added wiki_slug, operator_set and wiki_synced_at. They are covered by
+  // the same four policies as everything else, and this asserts that rather than
+  // trusting that adding columns is automatically safe.
+  it("B cannot read A's wiki linkage", async () => {
+    await data(A.token, `/contacts?id=eq.${rowId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ wiki_slug: `probe-${Date.now()}` }),
+    });
+
+    const res = await data(B.token, "/contacts?select=id,wiki_slug,operator_set");
+    expect(res.status).toBe(200);
+    const rows = (await res.json()) as { id: string }[];
+    expect(rows.map((r) => r.id)).not.toContain(rowId);
+  });
+
+  it("B cannot claim a field on A's row by writing operator_set", async () => {
+    const res = await data(B.token, `/contacts?id=eq.${rowId}`, {
+      method: "PATCH",
+      headers: { Prefer: "return=representation" },
+      body: JSON.stringify({ operator_set: ["name", "notes"] }),
+    });
+    expect([200, 204]).toContain(res.status);
+    if (res.status === 200) expect(await res.json()).toEqual([]);
+
+    const check = await data(A.token, `/contacts?id=eq.${rowId}`);
+    const [row] = (await check.json()) as { operator_set: string[] }[];
+    expect(row!.operator_set).toEqual([]);
+  });
+});
+
 describe("An unauthenticated caller reaches nothing", () => {
   it("the Data API refuses a request with no token", async () => {
     const res = await fetch(`${env.dataApiUrl}/contacts`);

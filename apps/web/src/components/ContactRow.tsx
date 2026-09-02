@@ -52,13 +52,26 @@ export function ContactRow({
         >
           {contact.name}
         </span>
-        <span
-          className={cn(
-            "eyebrow shrink-0",
-            ghost ? "text-[var(--ghost)]" : "text-[var(--ink-faint)]",
+        <span className="flex shrink-0 items-baseline gap-2">
+          {/* A quiet mark, not a badge: whether a row came from the wiki is useful to
+              know and never more important than the person's name. */}
+          {!ghost && contact.wiki_slug && (
+            <span
+              title={`From your wiki: ${contact.wiki_slug}`}
+              aria-label="from your wiki"
+              className="text-[0.625rem] text-[var(--brass-ink)] opacity-70"
+            >
+              ◆
+            </span>
           )}
-        >
-          {contact.priority}
+          <span
+            className={cn(
+              "eyebrow",
+              ghost ? "text-[var(--ghost)]" : "text-[var(--ink-faint)]",
+            )}
+          >
+            {contact.priority}
+          </span>
         </span>
       </div>
       {meta && (

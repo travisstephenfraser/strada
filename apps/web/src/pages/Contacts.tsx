@@ -47,6 +47,12 @@ export default function Contacts() {
   const contacts = state.status === "ready" ? state.contacts : [];
   const visible = useMemo(() => applyView(contacts, view), [contacts, view]);
   const highCount = contacts.filter((c) => c.priority === "high").length;
+  const wikiCount = contacts.filter((c) => c.wiki_slug).length;
+  const lastSynced = contacts
+    .map((c) => c.wiki_synced_at)
+    .filter((t): t is string => Boolean(t))
+    .toSorted()
+    .at(-1);
   const isFiltered = view.q.trim() !== "" || view.priority !== "all";
 
   async function handleSubmit(input: ContactInput) {
@@ -220,6 +226,14 @@ export default function Contacts() {
                 ? `Showing ${visible.length} of ${contacts.length}`
                 : `${contacts.length} ${contacts.length === 1 ? "person" : "people"}`}
               {highCount > 0 && ` · ${highCount} high`}
+              {/* State only. The sync itself runs locally, because the vault lives on
+                  a laptop and this app does not — see the README. */}
+              {wikiCount > 0 && (
+                <>
+                  {` · ${wikiCount} from your wiki`}
+                  {lastSynced && ` · synced ${relativeTime(lastSynced)}`}
+                </>
+              )}
             </p>
           )}
         </div>
@@ -278,6 +292,16 @@ export default function Contacts() {
       />
     </main>
   );
+}
+
+/** "2 hours ago", without pulling in a date library for one line. */
+function relativeTime(iso: string): string {
+  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.round(hours / 24)}d ago`;
 }
 
 /** Skeletons carry the geometry of a real row so nothing reflows when data lands. */

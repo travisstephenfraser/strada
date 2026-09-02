@@ -18,7 +18,8 @@
     "test": "npm run build:shared && vitest run --config vitest.config.mts --reporter=verbose",
     "test:rls": "npm run build:shared && node --env-file-if-exists=.env.local ./node_modules/vitest/vitest.mjs run --config vitest.rls.config.mts --reporter=verbose",
     "migrate": "node db/migrate.mjs",
-    "check:secrets": "bash scripts/check-no-secrets.sh"
+    "check:secrets": "bash scripts/check-no-secrets.sh",
+    "sync": "npm run build:shared && node --env-file-if-exists=.env.local ./node_modules/tsx/dist/cli.mjs apps/sync/src/index.ts"
   },
   "devDependencies": {
     "@neon/config": "^1.2.0",

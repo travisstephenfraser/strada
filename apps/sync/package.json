@@ -1,0 +1,21 @@
+{
+  "name": "@strada/sync",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Local-only wiki sync. NEVER deployed: it reads a vault that exists only on a developer machine.",
+  "scripts": {
+    "prebuild": "tsc -b ../../packages/shared",
+    "build": "tsc -p tsconfig.json",
+    "start": "node --env-file-if-exists=../../.env.local dist/index.js"
+  },
+  "dependencies": {
+    "@strada/shared": "*",
+    "zod": "4.1.12"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.3",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3"
+  }
+}

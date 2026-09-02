@@ -14,6 +14,7 @@ export default defineConfig({
     include: [
       "packages/shared/tests/**/*.test.ts",
       "apps/api/tests/**/*.test.ts",
+      "apps/sync/tests/**/*.test.ts",
     ],
     environment: "node",
   },

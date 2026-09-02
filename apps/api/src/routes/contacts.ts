@@ -145,6 +145,42 @@ export function createContactsRouter(dataApi: DataApiClient): Router {
     res.json({ contact });
   });
 
+  /**
+   * Hand a contact's fields back to the wiki by clearing operator_set.
+   *
+   * A separate route rather than an option on PATCH, because PATCH's whole job is to
+   * CLAIM fields — letting the same call also release them would make the claiming rule
+   * depend on body contents, which is how a safety property becomes a footgun.
+   */
+  router.post("/:id/reclaim", async (req: Request, res: Response) => {
+    const id = uuidParam(req.params.id);
+    if (!id) {
+      res.status(400).json({ error: "Not a valid contact id." });
+      return;
+    }
+
+    const result = await dataApi.request<Contact[]>({
+      token: req.accessToken!,
+      method: "PATCH",
+      table: "contacts",
+      filters: { id: `eq.${id}` },
+      body: { operator_set: [] },
+      prefer: ["max-affected=1", "handling=strict"],
+    });
+
+    if (result.error) {
+      const mapped = mapUpstreamError(result);
+      res.status(mapped.status).json(mapped.body);
+      return;
+    }
+    const contact = first(result.data);
+    if (!contact) {
+      res.status(404).json({ error: "Contact not found." });
+      return;
+    }
+    res.json({ contact });
+  });
+
   router.delete("/:id", async (req: Request, res: Response) => {
     const id = uuidParam(req.params.id);
     if (!id) {
