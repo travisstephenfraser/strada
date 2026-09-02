@@ -1,60 +1,60 @@
-
-
-
- RUN  v4.1.11 /Users/travis/Developer/pepeclass/assign1
-
- ✓ apps/api/tests/secrets.invariant.test.ts > the deployed API holds no privileged database credential > finds API source files to check 1ms
- ✓ apps/api/tests/secrets.invariant.test.ts > the deployed API holds no privileged database credential > never references DATABASE_URL 1ms
- ✓ apps/api/tests/secrets.invariant.test.ts > the deployed API holds no privileged database credential > never references PGPASSWORD 0ms
- ✓ apps/api/tests/secrets.invariant.test.ts > the deployed API holds no privileged database credential > never references postgresql:// 0ms
- ✓ apps/api/tests/secrets.invariant.test.ts > the deployed API holds no privileged database credential > never references postgres:// 0ms
- ✓ apps/api/tests/secrets.invariant.test.ts > the deployed API holds no privileged database credential > does not depend on a Postgres driver 0ms
- ✓ apps/api/tests/secrets.invariant.test.ts > the browser bundle cannot receive a server-only value > finds web source files to check 0ms
- ✓ apps/api/tests/secrets.invariant.test.ts > the browser bundle cannot receive a server-only value > never references the server-only variable DATABASE_URL 1ms
- ✓ apps/api/tests/secrets.invariant.test.ts > the browser bundle cannot receive a server-only value > never references the server-only variable NEON_AUTH_BASE_URL 1ms
- ✓ apps/api/tests/secrets.invariant.test.ts > the browser bundle cannot receive a server-only value > never references the server-only variable NEON_DATA_API_URL 0ms
- ✓ apps/api/tests/secrets.invariant.test.ts > the browser bundle cannot receive a server-only value > never references the server-only variable NEON_AUTH_COOKIE_SECRET 0ms
- ✓ apps/api/tests/secrets.invariant.test.ts > the browser bundle cannot receive a server-only value > exposes only the two public prefixes to client code 0ms
- ✓ apps/api/tests/secrets.invariant.test.ts > no environment file is tracked in git > commits .env.example and nothing else 0ms
- ✓ packages/shared/tests/contact.test.ts > contactInputSchema — the validation contract > accepts a complete contact 1ms
- ✓ packages/shared/tests/contact.test.ts > contactInputSchema — the validation contract > accepts a name alone and defaults priority to medium 0ms
- ✓ packages/shared/tests/contact.test.ts > contactInputSchema — the validation contract > rejects invalid names > rejects an empty name 0ms
- ✓ packages/shared/tests/contact.test.ts > contactInputSchema — the validation contract > rejects invalid names > rejects a whitespace-only name, matching the DB's btrim CHECK 0ms
- ✓ packages/shared/tests/contact.test.ts > contactInputSchema — the validation contract > rejects invalid names > rejects a missing name 0ms
- ✓ packages/shared/tests/contact.test.ts > contactInputSchema — the validation contract > rejects invalid names > rejects a name longer than 200 characters 0ms
- ✓ packages/shared/tests/contact.test.ts > contactInputSchema — the validation contract > rejects invalid priorities > rejects priority 'urgent' 0ms
- ✓ packages/shared/tests/contact.test.ts > contactInputSchema — the validation contract > rejects invalid priorities > rejects priority 'HIGH' 0ms
- ✓ packages/shared/tests/contact.test.ts > contactInputSchema — the validation contract > rejects invalid priorities > rejects priority '' 0ms
- ✓ packages/shared/tests/contact.test.ts > contactInputSchema — the validation contract > rejects invalid priorities > rejects priority 'critical' 0ms
- ✓ packages/shared/tests/contact.test.ts > contactInputSchema — the validation contract > rejects invalid priorities > rejects priority null 0ms
- ✓ packages/shared/tests/contact.test.ts > contactInputSchema — the validation contract > rejects invalid priorities > rejects priority 1 0ms
- ✓ packages/shared/tests/contact.test.ts > contactInputSchema — the validation contract > rejects invalid priorities > accepts priority high 0ms
- ✓ packages/shared/tests/contact.test.ts > contactInputSchema — the validation contract > rejects invalid priorities > accepts priority medium 0ms
- ✓ packages/shared/tests/contact.test.ts > contactInputSchema — the validation contract > rejects invalid priorities > accepts priority low 0ms
- ✓ packages/shared/tests/contact.test.ts > contactInputSchema — the validation contract > rejects over-length notes, matching the DB CHECK 0ms
- ✓ packages/shared/tests/contact.test.ts > contactInputSchema — the validation contract > trims values and drops empty optional strings rather than storing them 0ms
- ✓ packages/shared/tests/contact.test.ts > contactInputSchema — the validation contract > drops unknown keys instead of passing them upstream 0ms
- ✓ packages/shared/tests/contact.test.ts > contactPatchSchema > accepts a single-field edit 0ms
- ✓ packages/shared/tests/contact.test.ts > contactPatchSchema > rejects an empty patch 0ms
- ✓ packages/shared/tests/contact.test.ts > contactPatchSchema > still rejects a blank name on edit 0ms
- ✓ packages/shared/tests/contact.test.ts > stripServerOwnedFields > removes every field the client may not set 0ms
- ✓ apps/api/tests/contacts.route.test.ts > authentication > rejects a request with no bearer token 8ms
- ✓ apps/api/tests/contacts.route.test.ts > authentication > rejects a request with a bad bearer token 1ms
+ ✓ packages/shared/tests/sync.test.ts > asPriority guards the one validation contract > rejects 'urgent' so a model cannot invent a value the database refuses 0ms
+ ✓ packages/shared/tests/sync.test.ts > asPriority guards the one validation contract > rejects 'HIGH' so a model cannot invent a value the database refuses 0ms
+ ✓ packages/shared/tests/sync.test.ts > asPriority guards the one validation contract > rejects '' so a model cannot invent a value the database refuses 0ms
+ ✓ packages/shared/tests/sync.test.ts > asPriority guards the one validation contract > rejects null so a model cannot invent a value the database refuses 0ms
+ ✓ packages/shared/tests/sync.test.ts > asPriority guards the one validation contract > rejects 3 so a model cannot invent a value the database refuses 0ms
+ ✓ packages/shared/tests/sync.test.ts > asPriority guards the one validation contract > rejects undefined so a model cannot invent a value the database refuses 0ms
+ ✓ apps/sync/tests/sync.test.ts > reading the vault > reads every entity page from the fixture vault 6ms
+ ✓ apps/sync/tests/sync.test.ts > reading the vault > explains itself when pointed somewhere without an entities directory 0ms
+ ✓ apps/sync/tests/sync.test.ts > reading the vault > reads title and tags, and treats unreadable frontmatter as absent 0ms
+ ✓ apps/sync/tests/sync.test.ts > reading the vault > reads a folded title, the shape the real vault uses 0ms
+ ✓ apps/sync/tests/sync.test.ts > visibility rules > classifies [ 'visibility/pii' ] as pii 0ms
+ ✓ apps/sync/tests/sync.test.ts > visibility rules > classifies [ 'visibility/internal' ] as internal 0ms
+ ✓ apps/sync/tests/sync.test.ts > visibility rules > classifies [ 'person' ] as public 0ms
+ ✓ apps/sync/tests/sync.test.ts > visibility rules > classifies [] as public 0ms
+ ✓ apps/sync/tests/sync.test.ts > visibility rules > excludes pii and includes internal by default 1ms
+ ✓ apps/sync/tests/sync.test.ts > visibility rules > names a reason for every exclusion, so none is silent 0ms
+ ✓ apps/sync/tests/sync.test.ts > visibility rules > --include-pii and --exclude-internal invert each default 0ms
+ ✓ apps/sync/tests/sync.test.ts > the model's output is untrusted input > accepts a well-formed extraction 10ms
+ ✓ apps/sync/tests/sync.test.ts > the model's output is untrusted input > rejects a priority the database would refuse 1ms
+ ✓ apps/sync/tests/sync.test.ts > the model's output is untrusted input > rejects output that is not JSON 0ms
+ ✓ apps/sync/tests/sync.test.ts > the model's output is untrusted input > rejects a response missing required fields 0ms
+ ✓ apps/sync/tests/sync.test.ts > the model's output is untrusted input > says the model is unreachable rather than guessing at a cause 0ms
+ ✓ apps/sync/tests/sync.test.ts > mapping an extraction to a contact > drops non-people so machines never become contacts 0ms
+ ✓ apps/sync/tests/sync.test.ts > mapping an extraction to a contact > falls back to the page title when the model returns no name 0ms
+ ✓ apps/sync/tests/sync.test.ts > mapping an extraction to a contact > turns empty strings into null rather than storing blanks 0ms
+ ✓ apps/sync/tests/sync.test.ts > mapping an extraction to a contact > carries the slug so the contact stays linked to its page 0ms
+ ✓ apps/sync/tests/sync.test.ts > the vault cannot leak into a public repository > finds files to check 0ms
+ ✓ apps/sync/tests/sync.test.ts > the vault cannot leak into a public repository > never hardcodes a vault path 1ms
+ ✓ apps/sync/tests/sync.test.ts > the vault cannot leak into a public repository > keeps the fixture vault fictional and labelled 0ms
+ ✓ apps/sync/tests/sync.test.ts > the vault cannot leak into a public repository > is not deployable: no Vercel config references apps/sync 0ms
+ ✓ apps/api/tests/sync.route.test.ts > POST /api/contacts/sync > requires a token 12ms
+ ✓ apps/api/tests/sync.route.test.ts > POST /api/contacts/sync > creates a contact for a new wiki record 9ms
+ ✓ apps/api/tests/sync.route.test.ts > POST /api/contacts/sync > rejects a record whose priority the database would refuse, without writing 2ms
+ ✓ apps/api/tests/sync.route.test.ts > POST /api/contacts/sync > writes nothing on a dry run but still reports what it would do 1ms
+ ✓ apps/api/tests/sync.route.test.ts > a human's edits survive a sync > never writes a field the operator owns, and says so in the report 1ms
+ ✓ apps/api/tests/sync.route.test.ts > a human's edits survive a sync > never rewrites operator_set itself 1ms
+ ✓ apps/api/tests/sync.route.test.ts > the report distinguishes outcomes rather than counting them > reports unchanged and issues no write when nothing differs 1ms
+ ✓ apps/api/tests/sync.route.test.ts > the report distinguishes outcomes rather than counting them > names an orphaned contact and does not delete it 1ms
+ ✓ apps/api/tests/sync.route.test.ts > the report distinguishes outcomes rather than counting them > keeps going when one record fails, and names the failure 1ms
+ ✓ apps/api/tests/sync.route.test.ts > editing in the app claims fields for the human > adds the edited field to operator_set, additively 2ms
+ ✓ apps/api/tests/contacts.route.test.ts > authentication > rejects a request with no bearer token 9ms
+ ✓ apps/api/tests/contacts.route.test.ts > authentication > rejects a request with a bad bearer token 2ms
  ✓ apps/api/tests/contacts.route.test.ts > validation rejects before any upstream call > refuses an invalid priority with a 400 and never calls the database 4ms
  ✓ apps/api/tests/contacts.route.test.ts > validation rejects before any upstream call > refuses an empty name with a 400 and never calls the database 1ms
  ✓ apps/api/tests/contacts.route.test.ts > validation rejects before any upstream call > refuses a non-uuid id without calling the database 1ms
- ✓ apps/api/tests/contacts.route.test.ts > the client cannot shape the upstream request > ignores a client-supplied query string 6ms
+ ✓ apps/api/tests/contacts.route.test.ts > the client cannot shape the upstream request > ignores a client-supplied query string 7ms
  ✓ apps/api/tests/contacts.route.test.ts > the client cannot shape the upstream request > does not forward client headers such as Prefer or Accept-Profile 1ms
  ✓ apps/api/tests/contacts.route.test.ts > the client cannot shape the upstream request > replaces a client-supplied user_id with the verified subject 1ms
  ✓ apps/api/tests/contacts.route.test.ts > the client cannot shape the upstream request > strips a client-supplied id so the primary key cannot be probed 1ms
  ✓ apps/api/tests/contacts.route.test.ts > the client cannot shape the upstream request > offers no route for an unfiltered PATCH or DELETE 2ms
- ✓ apps/api/tests/contacts.route.test.ts > upstream request shape > filters a write by the path-parameter id and caps rows affected 1ms
+ ✓ apps/api/tests/contacts.route.test.ts > upstream request shape > filters a write by the path-parameter id and caps rows affected 2ms
  ✓ apps/api/tests/contacts.route.test.ts > upstream request shape > asks for the written row back so the UI has something to render 1ms
  ✓ apps/api/tests/contacts.route.test.ts > upstream failures map to honest statuses > turns a WITH CHECK rejection into a 403 1ms
  ✓ apps/api/tests/contacts.route.test.ts > upstream failures map to honest statuses > returns 404 when RLS filters the row out, without saying whether it exists 1ms
 
- Test Files  3 passed (3)
-      Tests  49 passed (49)
-   Start at  21:06:26
-   Duration  179ms (transform 65ms, setup 0ms, import 149ms, tests 39ms, environment 0ms)
+ Test Files  6 passed (6)
+      Tests  104 passed (104)
+   Start at  22:59:01
+   Duration  208ms (transform 184ms, setup 0ms, import 398ms, tests 102ms, environment 0ms)
 

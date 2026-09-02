@@ -19,7 +19,7 @@ Frontend   React 19 + Vite + TypeScript + Tailwind v4      Vercel (project A)
 Backend    Express 5 + TypeScript                          Vercel (project B)
 Database   Neon Postgres, RLS on the contacts table
 Auth       Neon Managed Better Auth (Ed25519 JWT)
-Tests      59 automated (49 hermetic + 10 live RLS)
+Tests      116 automated (104 hermetic + 12 live RLS)
 ```
 
 ---
@@ -38,6 +38,7 @@ Tests      59 automated (49 hermetic + 10 live RLS)
 - [Tests](#tests)
 - [Grading evidence](#grading-evidence)
 - [Deployment](#deployment)
+- [Optional: wiki sync](#optional-wiki-sync)
 - [Known limitations and what I would do next](#known-limitations-and-what-i-would-do-next)
 
 ---
@@ -346,8 +347,8 @@ no server-side cookie session to sign.
 ## Tests
 
 ```bash
-npm test           # 49 hermetic tests — no credentials, no network, no database
-npm run test:rls   # 10 live tests — the two-account privacy proof
+npm test           # 104 hermetic tests — no credentials, no network, no database
+npm run test:rls   # 12 live tests — the two-account privacy proof
 ```
 
 **`npm test` needs no configuration**, so it runs immediately after a clone. It covers:
@@ -420,19 +421,21 @@ And a `priority` that somehow reached the database would still be refused by the
 ```console
 $ npm run test:rls
 
- ✓ User A's row, as seen by User A (positive control) > A can read the row A created
- ✓ User B cannot SEE User A's contacts > B's unfiltered read of the whole table does not contain A's row
- ✓ User B cannot SEE User A's contacts > B cannot read A's row even when asking for it by id
- ✓ User B cannot CHANGE User A's contacts > B's update of A's row affects nothing
- ✓ User B cannot CHANGE User A's contacts > B's delete of A's row removes nothing
- ✓ User B cannot CHANGE User A's contacts > B's unfiltered delete cannot reach A's rows
- ✓ Ownership cannot be handed to another user (WITH CHECK) > A cannot create a row owned by B
- ✓ Ownership cannot be handed to another user (WITH CHECK) > A cannot move their own row to B
- ✓ An unauthenticated caller reaches nothing > the Data API refuses a request with no token
- ✓ An unauthenticated caller reaches nothing > the Data API refuses a forged token
+ ✓ User A's row, as seen by User A (positive control) > A can read the row A created 94ms
+ ✓ User B cannot SEE User A's contacts > B's unfiltered read of the whole table does not contain A's row 31ms
+ ✓ User B cannot SEE User A's contacts > B cannot read A's row even when asking for it by id 31ms
+ ✓ User B cannot CHANGE User A's contacts > B's update of A's row affects nothing 61ms
+ ✓ User B cannot CHANGE User A's contacts > B's delete of A's row removes nothing 61ms
+ ✓ User B cannot CHANGE User A's contacts > B's unfiltered delete cannot reach A's rows 87ms
+ ✓ Ownership cannot be handed to another user (WITH CHECK) > A cannot create a row owned by B 30ms
+ ✓ Ownership cannot be handed to another user (WITH CHECK) > A cannot move their own row to B 60ms
+ ✓ The wiki-sync columns do not weaken ownership > B cannot read A's wiki linkage 59ms
+ ✓ The wiki-sync columns do not weaken ownership > B cannot claim a field on A's row by writing operator_set 128ms
+ ✓ An unauthenticated caller reaches nothing > the Data API refuses a request with no token 27ms
+ ✓ An unauthenticated caller reaches nothing > the Data API refuses a forged token 27ms
 
  Test Files  1 passed (1)
-      Tests  10 passed (10)
+      Tests  12 passed (12)
 ```
 
 Two accounts sign in for real and the assertions run over HTTP against the **deployed**
@@ -458,8 +461,8 @@ breakage were the unfiltered read and the two `WITH CHECK` cases.
 ```console
 $ npm test
 
- Test Files  3 passed (3)
-      Tests  49 passed (49)
+ Test Files  6 passed (6)
+      Tests  104 passed (104)
 ```
 
 Full output: [`docs/test-output-unit.txt`](docs/test-output-unit.txt) ·
@@ -497,6 +500,100 @@ Development). A variable set only for Production leaves every preview deploy bla
 
 ---
 
+## Optional: wiki sync
+
+**Not part of the assignment.** An optional local tool that populates Strada from an
+Obsidian vault, so the same people do not have to be typed twice. The app is complete
+without it and nothing here runs on Vercel.
+
+```bash
+npm run sync -- --dry-run   # report only, writes nothing
+npm run sync                # apply
+```
+
+### Why it cannot be a button
+
+The vault is a directory on a laptop. Strada runs on Vercel. A hosted server cannot read
+that directory, and giving it a way to would invert the architecture the rest of this
+README defends. So the sync runs locally and reaches Strada through the same public API
+as the browser, signing in as the same user — it holds no privilege the app does not
+already have, and RLS applies to its writes identically.
+
+The web UI shows sync **state** (a mark on wiki-sourced rows, `11 from your wiki ·
+synced 2h ago`) and cannot trigger a sync.
+
+### What crosses the boundary, and what does not
+
+```
+vault (local) ─▶ local model ─▶ derived fields ─▶ Strada API ─▶ RLS ─▶ Postgres
+                     ▲
+        page text stops here
+```
+
+Extraction runs against a model on the same machine. What leaves is a name, company,
+role, where you met, a priority, and one generated sentence about what to discuss next —
+never verbatim page text. The vault contains other people's names, contact details and
+candid assessments; they did not consent to that reaching a hosted service, which is why
+a hosted model is not an option here even though it would extract better.
+
+**The vault is read-only.** The sync opens files and does nothing else: no writes, no
+moves, no git operations, not even a status check. Verified by checksumming every entity
+page before and after three full runs. A write-back path is deliberately absent rather
+than merely unused.
+
+Pages tagged `visibility/pii` are excluded by default; `visibility/internal` pages are
+included, because "do not publish" is not the same as "do not put in my own private,
+row-level-secured list". Both are overridable (`--include-pii`, `--exclude-internal`),
+and **every exclusion is named in the report** — a silent exclusion is indistinguishable
+from a page that was never found.
+
+### Your edits win
+
+A field you edit in the app is marked operator-owned, and sync will not overwrite it —
+it reports the refusal instead:
+
+```
+kept your edits (wiki wanted to change these; you own them) (1)
+    rosa-delgado  ✋ notes
+```
+
+Fields you have not touched keep tracking the wiki. To hand a field back, clear the
+claim with `POST /api/contacts/:id/reclaim`; without that, a contact would slowly ossify
+as every later wiki improvement was refused.
+
+Sync never deletes. A contact whose page disappears is reported as `orphaned` and left.
+
+### The report names outcomes, never a total
+
+`created`, `updated` (with the field names), `unchanged`, `protected`, `excluded`,
+`skipped`, `orphaned`, `failed` — each printed even when empty. "14 synced" would read
+as success whether the run did the right thing, rewrote identical values, or quietly
+refused half its input. A test asserts that running twice produces an all-`unchanged`
+second run.
+
+### A finding worth recording
+
+The first live run marked **every** person `high`. A field with no variance carries no
+information, and priority drives sorting and filtering — but the interesting question
+was whether the extractor was broken or the vault genuinely is all open loops. Four
+engineered pages settled it: a clear open loop scored high; a warm relationship with
+nothing outstanding, a brief encounter, and a very senior contact with no open loop all
+scored low. The model discriminates, so the result was real signal about which people
+earn a wiki page at all. The prompt now states the criteria regardless, because "how
+worth staying close" was too vague to be a measurement.
+
+### Setup
+
+Needs `STRADA_VAULT_PATH`, `STRADA_API_URL`, `STRADA_SYNC_EMAIL`,
+`STRADA_SYNC_PASSWORD` in `.env.local` (gitignored), and LM Studio running locally with
+a model loaded. If the model is unreachable the CLI **exits non-zero** rather than
+writing a degraded sync that looks like a successful one.
+
+No vault path or vault content is committed. Tests run against a synthetic fixture vault
+of invented people, and a test fails if any source file contains a vault path.
+
+---
+
 ## Known limitations and what I would do next
 
 - **Undo re-creates rather than restores.** The undone contact comes back with a new
@@ -515,6 +612,11 @@ Development). A variable set only for Production leaves every preview deploy bla
   which is where it belongs.
 - **No email verification or password reset.** Neon Auth supports both; neither is
   required here and both add flows that would need their own tests.
+- **Wiki sync is optional and local.** It cannot run on Vercel, so a fresh clone with no
+  vault simply never uses it. Extraction quality is bounded by whichever local model is
+  loaded, and a hosted model is deliberately not an option.
+- **A reclaimed field is all-or-nothing.** `reclaim` clears every claim on a contact
+  rather than one field. Per-field release would be the obvious next step.
 - **The RLS suite is destructive by design.** One assertion issues an unfiltered
   `DELETE`, which is safe only while RLS works. Point it at a throwaway branch, never at
   data that matters — running it with RLS disabled empties the table, which is exactly

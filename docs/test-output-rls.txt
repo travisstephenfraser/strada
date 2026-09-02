@@ -7,19 +7,21 @@
 
  RUN  v4.1.11 /Users/travis/Developer/pepeclass/assign1
 
- ✓ tests/rls/two-account.test.ts > User A's row, as seen by User A (positive control) > A can read the row A created 31ms
- ✓ tests/rls/two-account.test.ts > User B cannot SEE User A's contacts > B's unfiltered read of the whole table does not contain A's row 97ms
+ ✓ tests/rls/two-account.test.ts > User A's row, as seen by User A (positive control) > A can read the row A created 94ms
+ ✓ tests/rls/two-account.test.ts > User B cannot SEE User A's contacts > B's unfiltered read of the whole table does not contain A's row 31ms
  ✓ tests/rls/two-account.test.ts > User B cannot SEE User A's contacts > B cannot read A's row even when asking for it by id 31ms
- ✓ tests/rls/two-account.test.ts > User B cannot CHANGE User A's contacts > B's update of A's row affects nothing 64ms
- ✓ tests/rls/two-account.test.ts > User B cannot CHANGE User A's contacts > B's delete of A's row removes nothing 62ms
- ✓ tests/rls/two-account.test.ts > User B cannot CHANGE User A's contacts > B's unfiltered delete cannot reach A's rows 88ms
- ✓ tests/rls/two-account.test.ts > Ownership cannot be handed to another user (WITH CHECK) > A cannot create a row owned by B 32ms
+ ✓ tests/rls/two-account.test.ts > User B cannot CHANGE User A's contacts > B's update of A's row affects nothing 61ms
+ ✓ tests/rls/two-account.test.ts > User B cannot CHANGE User A's contacts > B's delete of A's row removes nothing 61ms
+ ✓ tests/rls/two-account.test.ts > User B cannot CHANGE User A's contacts > B's unfiltered delete cannot reach A's rows 87ms
+ ✓ tests/rls/two-account.test.ts > Ownership cannot be handed to another user (WITH CHECK) > A cannot create a row owned by B 30ms
  ✓ tests/rls/two-account.test.ts > Ownership cannot be handed to another user (WITH CHECK) > A cannot move their own row to B 60ms
+ ✓ tests/rls/two-account.test.ts > The wiki-sync columns do not weaken ownership > B cannot read A's wiki linkage 59ms
+ ✓ tests/rls/two-account.test.ts > The wiki-sync columns do not weaken ownership > B cannot claim a field on A's row by writing operator_set 128ms
  ✓ tests/rls/two-account.test.ts > An unauthenticated caller reaches nothing > the Data API refuses a request with no token 27ms
- ✓ tests/rls/two-account.test.ts > An unauthenticated caller reaches nothing > the Data API refuses a forged token 29ms
+ ✓ tests/rls/two-account.test.ts > An unauthenticated caller reaches nothing > the Data API refuses a forged token 27ms
 
  Test Files  1 passed (1)
-      Tests  10 passed (10)
-   Start at  21:06:27
-   Duration  1.06s (transform 10ms, setup 0ms, import 14ms, tests 996ms, environment 0ms)
+      Tests  12 passed (12)
+   Start at  22:59:02
+   Duration  1.36s (transform 11ms, setup 0ms, import 16ms, tests 1.29s, environment 0ms)
 
