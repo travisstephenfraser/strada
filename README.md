@@ -535,8 +535,13 @@ README defends. So the sync runs locally and reaches Strada through the same pub
 as the browser, signing in as the same user — it holds no privilege the app does not
 already have, and RLS applies to its writes identically.
 
-The web UI shows sync **state** (a mark on wiki-sourced rows, `11 from your wiki ·
-synced 2h ago`) and cannot trigger a sync.
+The web UI shows sync **state** — a mark on wiki-sourced rows, and a footer counting
+them — and cannot trigger a sync.
+
+![Wiki-synced contacts](docs/screenshots/10-wiki-synced.png)
+
+Four of these seven came from wiki pages and carry the mark; the other three were typed
+into the app. Sorting, filtering and editing do not care which is which.
 
 ### What crosses the boundary, and what does not
 
