@@ -16,6 +16,12 @@ export default defineConfig({
   // default, so "VITE_" has to be listed explicitly.
   envPrefix: ["VITE_", "NEXT_PUBLIC_"],
 
+  // One .env.local at the repository root, shared with the API and the migrations,
+  // rather than a second copy here. Safe because envPrefix still decides what reaches
+  // the bundle: the server-only names in that file match neither prefix, so Vite
+  // cannot inline them even though they sit in the same file.
+  envDir: fileURLToPath(new URL("../..", import.meta.url)),
+
   resolve: {
     alias: {
       "@": fileURLToPath(new URL("./src", import.meta.url)),

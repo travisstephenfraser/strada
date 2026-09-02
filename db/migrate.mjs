@@ -33,7 +33,10 @@ function loadEnvLocal() {
 
 loadEnvLocal();
 
-const connectionString = process.env.DATABASE_URL;
+// Prefer the unpooled endpoint for DDL: PgBouncer transaction pooling and multi-
+// statement DDL transactions do not mix reliably. Falls back to the pooled URL.
+const connectionString =
+  process.env.DATABASE_URL_UNPOOLED || process.env.DATABASE_URL;
 if (!connectionString) {
   console.error(
     "\n  DATABASE_URL is not set.\n" +
@@ -48,14 +51,40 @@ const client = new pg.Client({ connectionString });
 try {
   await client.connect();
 
+  // The migration ledger lives OUTSIDE `public` on purpose.
+  //
+  // Enabling the Neon Data API installs `ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  // GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO authenticated`, so *every* table
+  // created in `public` is fully writable by every signed-in user unless RLS says
+  // otherwise. A bookkeeping table is not something to defend with policies — it
+  // should not be reachable from the API at all, and only `public` is exposed.
+  await client.query("create schema if not exists strada_meta");
   await client.query(`
-    create table if not exists schema_migrations (
+    create table if not exists strada_meta.schema_migrations (
       filename   text primary key,
       applied_at timestamptz not null default now()
     )
   `);
+  await client.query("revoke all on schema strada_meta from public");
+  await client.query("revoke all on all tables in schema strada_meta from public");
 
-  const { rows } = await client.query("select filename from schema_migrations");
+  // One-time move of a ledger created by an earlier version of this script.
+  await client.query(`
+    do $$
+    begin
+      if to_regclass('public.schema_migrations') is not null then
+        insert into strada_meta.schema_migrations (filename, applied_at)
+          select filename, applied_at from public.schema_migrations
+          on conflict (filename) do nothing;
+        drop table public.schema_migrations;
+      end if;
+    end
+    $$;
+  `);
+
+  const { rows } = await client.query(
+    "select filename from strada_meta.schema_migrations",
+  );
   const applied = new Set(rows.map((r) => r.filename));
 
   const pending = readdirSync(migrationsDir)
@@ -75,7 +104,7 @@ try {
     try {
       await client.query(sql);
       await client.query(
-        "insert into schema_migrations (filename) values ($1)",
+        "insert into strada_meta.schema_migrations (filename) values ($1)",
         [filename],
       );
       await client.query("commit");

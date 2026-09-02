@@ -18,3 +18,4 @@ npm-debug.log*
 
 # Course material — the assignment brief and rubric, not part of the deliverable
 feed/
+.neon
