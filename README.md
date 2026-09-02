@@ -573,14 +573,22 @@ second run.
 
 ### A finding worth recording
 
-The first live run marked **every** person `high`. A field with no variance carries no
-information, and priority drives sorting and filtering — but the interesting question
-was whether the extractor was broken or the vault genuinely is all open loops. Four
-engineered pages settled it: a clear open loop scored high; a warm relationship with
-nothing outstanding, a brief encounter, and a very senior contact with no open loop all
-scored low. The model discriminates, so the result was real signal about which people
-earn a wiki page at all. The prompt now states the criteria regardless, because "how
-worth staying close" was too vague to be a measurement.
+The first live run marked **every** one of the eleven people `high`. A field with no
+variance carries no information, and priority drives sorting and filtering, so the
+feature was silently useless. The prompt had asked only "how actively worth staying
+close to this person appears to be" — too vague to be a measurement.
+
+Two things fixed and confirmed it. The prompt now gives criteria the model can apply
+(high means a specific open loop exists; medium is the common case; seniority is
+explicitly not an open loop), and the distribution became **9 high / 2 medium**.
+Separately, four engineered pages checked that the model can discriminate at all: a
+clear open loop scored high, while a warm relationship with nothing outstanding, a
+brief encounter, and a very senior contact with no open loop all scored low.
+
+The residual skew is real rather than degenerate — someone only writes a wiki page for
+a person they have live business with — but the lesson is that it took a deliberate
+check to tell "the data is like that" apart from "the measurement is broken", and the
+first answer looked exactly like the second.
 
 ### Setup
 

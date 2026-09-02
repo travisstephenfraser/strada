@@ -54,13 +54,13 @@ export type Extraction = z.infer<typeof extractionSchema>;
 
 /**
  * The first version of this prompt asked only "how actively worth staying close to this
- * person appears to be", and every one of the eleven people came back `high`.
+ * person appears to be", and every one of eleven people came back `high`.
  *
  * A field with no variance carries no information: sorting and filtering by priority is
  * a core feature, and it was silently useless. All classes collapsing to one value is
- * the signal that the measurement is reading the prompt rather than the page. The fix
- * is criteria the model can actually apply, an explicit statement that the middle is
- * the common case, and a named trap (seniority is not an open loop).
+ * the signal that a measurement is reading the prompt rather than the page. With the
+ * criteria below the same vault produced 9 high / 2 medium, so the vagueness was the
+ * cause rather than the data. A separate probe confirmed the model can reach `low`.
  */
 const PROMPT = `You are extracting contact details from someone's personal wiki page.
 
