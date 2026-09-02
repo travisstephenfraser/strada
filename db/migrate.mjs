@@ -1,0 +1,102 @@
+#!/usr/bin/env node
+/**
+ * Applies db/migrations/*.sql in filename order, once each.
+ *
+ * Deliberately uses `pg` rather than `psql` so the project has no system dependency:
+ * `npm run migrate` works on any machine that can run the app.
+ *
+ * DATABASE_URL is read from the environment or from .env.local at the repo root. It is
+ * used HERE ONLY. It is never added to either Vercel project and the deployed code never
+ * reads it — ownership is enforced by RLS against the end user's own JWT, not by a
+ * privileged connection.
+ */
+import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import pg from "pg";
+
+const here = dirname(fileURLToPath(import.meta.url));
+const root = join(here, "..");
+const migrationsDir = join(here, "migrations");
+
+function loadEnvLocal() {
+  const file = join(root, ".env.local");
+  if (!existsSync(file)) return;
+  for (const line of readFileSync(file, "utf8").split("\n")) {
+    const match = /^\s*([A-Z0-9_]+)\s*=\s*(.*)$/.exec(line);
+    if (!match) continue;
+    const [, key, rawValue] = match;
+    if (process.env[key]) continue;
+    process.env[key] = rawValue.trim().replace(/^["']|["']$/g, "");
+  }
+}
+
+loadEnvLocal();
+
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  console.error(
+    "\n  DATABASE_URL is not set.\n" +
+      "  Copy .env.example to .env.local and paste your Neon connection string.\n" +
+      "  (.env.local is gitignored; DATABASE_URL is used by migrations only.)\n",
+  );
+  process.exit(1);
+}
+
+const client = new pg.Client({ connectionString });
+
+try {
+  await client.connect();
+
+  await client.query(`
+    create table if not exists schema_migrations (
+      filename   text primary key,
+      applied_at timestamptz not null default now()
+    )
+  `);
+
+  const { rows } = await client.query("select filename from schema_migrations");
+  const applied = new Set(rows.map((r) => r.filename));
+
+  const pending = readdirSync(migrationsDir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort()
+    .filter((f) => !applied.has(f));
+
+  if (pending.length === 0) {
+    console.log("Up to date — no pending migrations.");
+  }
+
+  for (const filename of pending) {
+    const sql = readFileSync(join(migrationsDir, filename), "utf8");
+    process.stdout.write(`Applying ${filename} ... `);
+    // Each migration is one transaction: a failure leaves nothing half-applied.
+    await client.query("begin");
+    try {
+      await client.query(sql);
+      await client.query(
+        "insert into schema_migrations (filename) values ($1)",
+        [filename],
+      );
+      await client.query("commit");
+      console.log("ok");
+    } catch (error) {
+      await client.query("rollback");
+      console.log("FAILED");
+      throw error;
+    }
+  }
+
+  if (pending.length > 0) {
+    console.log(
+      "\n  Done. Now refresh the Data API schema cache:\n" +
+        "  Neon Console -> your project -> Data API -> Refresh schema cache\n" +
+        "  Until you do, PostgREST answers PGRST205 'table not found'.\n",
+    );
+  }
+} catch (error) {
+  console.error(`\nMigration failed: ${error.message}\n`);
+  process.exitCode = 1;
+} finally {
+  await client.end();
+}

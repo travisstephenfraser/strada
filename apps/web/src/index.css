@@ -1,0 +1,188 @@
+@import "tailwindcss";
+@import "@fontsource-variable/newsreader";
+@import "@fontsource-variable/public-sans";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+  Strada — a table, not an inbox.
+
+  Two rules govern this file:
+  1. Serif means proper noun. Newsreader is used for people's names and the wordmark,
+     never for UI chrome. Public Sans is used for every machine word.
+  2. Semantic colour is monosemous. `brass` means priority and nothing else; `invalid`
+     means invalid input and nothing else. That is why deleting a contact is NOT red —
+     removing someone from your own list is tidying, not an error, and reusing red there
+     would make the eye unable to tell the two apart on the same screen.
+*/
+
+:root {
+  --fog: #edf1f4;
+  --plate: #ffffff;
+  --sunken: #f6f8fa;
+  --hairline: #dbe3ea;
+  --hairline-strong: #c3cfd9;
+  --ink: #13232e;
+  --ink-soft: #4f6270;
+  --ink-faint: #546775;
+  --bay: #0e3a4d;
+  --bay-mid: #17546e;
+
+  /*
+    Solved down from #dfa62a. The priority spine IS the encoding, so WCAG 1.4.11's 3:1
+    minimum for graphical objects applies to it; the brighter gold measures 2.18:1 on
+    white and fails. #b8801a is the brightest gold clearing 3:1 on both the plate (3.42)
+    and the row-hover surface (3.21).
+  */
+  --brass: #b8801a;
+  --brass-wash: #f7edd8;
+  --brass-ink: #7a5410;
+
+  --ok: #2c6b57;
+  --invalid: #a3271d;
+  --invalid-wash: #fbeae8;
+
+  /* Empty-state phantom rows only. Deliberately sub-threshold and aria-hidden — it
+     must read as "not your data". Never used for real content. */
+  --ghost: #9aabb8;
+
+  --background: var(--fog);
+  --foreground: var(--ink);
+  --card: var(--plate);
+  --card-foreground: var(--ink);
+  --popover: var(--plate);
+  --popover-foreground: var(--ink);
+  --primary: var(--bay);
+  --primary-foreground: #ffffff;
+  --secondary: var(--sunken);
+  --secondary-foreground: var(--ink);
+  --muted: var(--sunken);
+  --muted-foreground: var(--ink-soft);
+  --accent: var(--brass-wash);
+  --accent-foreground: var(--brass-ink);
+  --destructive: var(--invalid);
+  --destructive-foreground: #ffffff;
+  --border: var(--hairline);
+  --input: var(--hairline-strong);
+  --ring: var(--bay);
+  --radius: 0.625rem;
+
+  /* Shadow means floating above the page, never decoration. The plate, the rows and
+     every control get none — white on fog separates by value alone. */
+  --shadow-overlay: 0 12px 32px -8px rgb(11 26 35 / 0.24), 0 2px 8px rgb(11 26 35 / 0.1);
+  --shadow-toast: 0 6px 20px -4px rgb(11 26 35 / 0.18);
+}
+
+.dark {
+  --fog: #0b1a23;
+  --plate: #112a37;
+  --sunken: #0e222d;
+  --hairline: rgb(255 255 255 / 0.1);
+  --hairline-strong: rgb(255 255 255 / 0.18);
+  --ink: #e6edf2;
+  --ink-soft: #9fb0bd;
+  --ink-faint: #8ea1b0;
+
+  /* Both accents are re-lit rather than inherited: a colour darkened to clear AA in
+     light mode disappears against a dark plate. */
+  --bay: #6fb9d6;
+  --bay-mid: #93cde3;
+  --brass: #e8bd5c;
+  --brass-wash: rgb(232 189 92 / 0.14);
+  --brass-ink: #e8bd5c;
+
+  --ok: #5fbf9a;
+  --invalid: #ef8079;
+  --invalid-wash: rgb(239 128 121 / 0.12);
+  --ghost: #4a6070;
+
+  --primary-foreground: #0b1a23;
+  --destructive-foreground: #0b1a23;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-fog: var(--fog);
+  --color-plate: var(--plate);
+  --color-sunken: var(--sunken);
+  --color-hairline: var(--hairline);
+  --color-hairline-strong: var(--hairline-strong);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-bay: var(--bay);
+  --color-bay-mid: var(--bay-mid);
+  --color-brass: var(--brass);
+  --color-brass-wash: var(--brass-wash);
+  --color-brass-ink: var(--brass-ink);
+  --color-ok: var(--ok);
+  --color-invalid: var(--invalid);
+  --color-invalid-wash: var(--invalid-wash);
+  --color-ghost: var(--ghost);
+
+  --font-serif: "Newsreader Variable", Georgia, serif;
+  --font-sans: "Public Sans Variable", system-ui, sans-serif;
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-plate: 14px;
+
+  --text-eyebrow: 0.6875rem;
+  --text-meta: 0.8125rem;
+  --text-body: 0.9375rem;
+  --text-name: 1.0625rem;
+  --text-title: 1.25rem;
+  --text-wordmark: 1.75rem;
+
+  --container-roll: 880px;
+  --ease-strada: cubic-bezier(0.32, 0.72, 0, 1);
+
+  --shadow-overlay: var(--shadow-overlay);
+  --shadow-toast: var(--shadow-toast);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    font-variant-numeric: tabular-nums;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+@utility eyebrow {
+  font-size: var(--text-eyebrow);
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1;
+}

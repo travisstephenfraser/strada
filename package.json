@@ -1,0 +1,28 @@
+{
+  "name": "strada",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Strada \u2014 a private networking tracker for Berkeley. Neon Postgres + RLS.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "build:shared": "npm run build --workspace @strada/shared",
+    "dev:api": "npm run dev --workspace @strada/api",
+    "dev:web": "npm run dev --workspace @strada/web",
+    "build": "npm run build:shared && npm run build --workspace @strada/web && npm run build --workspace @strada/api",
+    "test": "npm run build:shared && vitest run --reporter=verbose",
+    "test:rls": "npm run build:shared && vitest run --config vitest.rls.config.ts --reporter=verbose",
+    "migrate": "node db/migrate.mjs",
+    "check:secrets": "bash scripts/check-no-secrets.sh"
+  },
+  "devDependencies": {
+    "pg": "8.23.0",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  }
+}

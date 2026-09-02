@@ -1,0 +1,20 @@
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+
+# Secrets — every .env EXCEPT the committed example
+.env
+.env.*
+!.env.example
+
+.vercel/
+coverage/
+.DS_Store
+*.log
+npm-debug.log*
+.vscode/
+.idea/
+
+# Course material — the assignment brief and rubric, not part of the deliverable
+feed/

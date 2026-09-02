@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24.x
+          cache: npm
+
+      - run: npm ci
+
+      # Hermetic suite only: no credentials, no network, no database. A grader can run
+      # exactly this after cloning. The two-account RLS proof needs real accounts and
+      # runs separately via `npm run test:rls` — see the README.
+      - run: npm test
+
+      - run: npm run build
+
+      - run: npm run check:secrets
