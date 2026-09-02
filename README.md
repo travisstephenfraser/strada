@@ -209,7 +209,29 @@ _Pending Phases 4-6._
 
 ## Deployment
 
-_Pending Phase 6._
+Both apps deploy from this one repository to two Vercel projects, each with its own
+Root Directory (`apps/web`, `apps/api`) and its own environment variables. Pushing to
+`main` deploys both.
+
+**The step that is easy to miss:** the deployed origin must be added to Neon Auth's
+trusted domains, or sign-in fails on the live site while working perfectly on
+localhost.
+
+```bash
+neon neon-auth domain list
+neon neon-auth domain add https://<your-app>.vercel.app
+```
+
+Without it the auth endpoint answers `403 {"code":"INVALID_ORIGIN"}`. Nothing in the
+build or the test suite can catch this — the code is identical in both environments and
+only the origin differs — so it is a checklist item rather than a guard.
+
+Environment variables must be set for **all three** Vercel environments (Production,
+Preview, Development), not just Production; a variable set only for Production leaves
+preview deploys with a blank screen.
+
+`DATABASE_URL` is never added to either project. It is used only by `npm run migrate`
+from a developer machine.
 
 ## Known limitations
 

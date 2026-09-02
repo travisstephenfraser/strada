@@ -7,6 +7,27 @@ import { Field } from "@/components/ui/field";
 type Mode = "signin" | "signup";
 
 /**
+ * Turn whatever the auth client hands back into something true.
+ *
+ * A browser cannot distinguish "server unreachable" from "response blocked by CORS",
+ * so neither can this — but it can avoid asserting a cause it does not know, and it
+ * can pass through a message the server actually sent.
+ */
+function describeAuthError(error: unknown): string {
+  const shape = error as { message?: string; code?: string } | null;
+
+  if (shape?.code === "INVALID_ORIGIN") {
+    return "This site is not an approved origin for sign-in. Add it to the Neon Auth trusted domains.";
+  }
+  if (shape?.message) return shape.message;
+  if (error instanceof TypeError) {
+    // A thrown TypeError from fetch means the request never produced a response.
+    return "The sign-in service did not respond. It may be unreachable, or this site may not be an approved origin.";
+  }
+  return "That did not work. Check your details and try again.";
+}
+
+/**
  * Sign in and sign up are one screen with a toggled mode, not two routes: the fields
  * are nearly identical and a person who guesses wrong should not have to navigate.
  */
@@ -46,12 +67,16 @@ export default function SignIn() {
       // The adapter configures Better Auth with `throw: false`, so failures arrive
       // here rather than as exceptions.
       if (result.error) {
-        setError(result.error.message ?? "That did not work. Check your details.");
+        setError(describeAuthError(result.error));
         return;
       }
-      // A successful session flips <SignedIn>, which swaps the route. No navigate call.
-    } catch {
-      setError("Could not reach the sign-in service. Check your connection.");
+      // A successful session flips the session store, which swaps the screen.
+    } catch (caught) {
+      // Report what actually happened. An earlier version said "check your
+      // connection" for every failure, which sent a real INVALID_ORIGIN rejection —
+      // a configuration problem — off to be debugged as a network one.
+      console.error("[strada] sign-in failed", caught);
+      setError(describeAuthError(caught));
     } finally {
       setBusy(false);
     }
