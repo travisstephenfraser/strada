@@ -3,8 +3,8 @@
 **A private record of the people you want to stay close to at Berkeley.**
 
 Strada is a networking tracker built around one idea: a list of people should not be a
-to-do list. Most contact trackers are guilt machines — *last contacted 94 days ago*,
-three overdue, a streak you broke — which is why people open them twice and never again.
+to-do list. Most contact trackers are guilt machines: *last contacted 94 days ago*,
+three overdue, a streak you broke. That is why people open them twice and never again.
 Strada is named for the café where you actually met these people, and it behaves like a
 record rather than a queue: no time-decay, no overdue states, no streaks. You add
 someone, write down where you met and what you want to talk about next, and the list is
@@ -46,14 +46,14 @@ Tests      143 automated (121 hermetic + 22 live)
 
 ## Product walkthrough
 
-**Sign in.** One screen for both sign-in and sign-up, toggled — the fields are nearly
+**Sign in.** One screen for both sign-in and sign-up, toggled; the fields are nearly
 identical and guessing wrong should not cost you a navigation.
 
 ![Sign in](docs/screenshots/01-sign-in.png)
 
 **The empty state.** Because the rubric requires a grader to create an account before
 they can see anything, this is screen one of the product for every grader. Rather than
-"no contacts yet", three phantom rows dissolve under the call to action — showing what a
+"no contacts yet", three phantom rows dissolve under the call to action, showing what a
 populated table looks like, and teaching the priority encoding at all three lengths
 before any data exists. The rows are `aria-hidden`, inert, and never touch the database.
 
@@ -65,7 +65,7 @@ serif and are the loudest thing on screen; everything else is caption.
 ![Contact list](docs/screenshots/03-contact-list.png)
 
 **Adding someone.** The priority control renders the real spine marks at their real
-proportions, so the encoding is taught at the moment you choose — which is why no legend
+proportions, so the encoding is taught at the moment you choose, which is why no legend
 appears anywhere else in the app.
 
 ![Add form](docs/screenshots/04-add-form.png)
@@ -82,7 +82,7 @@ confusable on one screen. That is only defensible because undo exists:
 
 ![Undo](docs/screenshots/08-deleted-with-undo.png)
 
-**Sort, filter, and search** live in one caption line, and the view lives in the URL — so
+**Sort, filter, and search** live in one caption line, and the view lives in the URL, so
 a filtered table survives a refresh and can be linked.
 
 ![Filtered view](docs/screenshots/09-filtered-url-state.png)
@@ -92,7 +92,7 @@ a filtered table survives a refresh and can be linked.
 ## Features
 
 - Email sign-up, sign-in, and sign-out via Neon Managed Better Auth
-- A private contact list per user — name, company, role, where you met, notes, priority
+- A private contact list per user: name, company, role, where you met, notes, priority
 - Create, view, edit, delete, and undo a delete; everything persists in Neon Postgres
 - Sort by name, company, priority, or recently added
 - Filter by priority and search across every text field
@@ -107,7 +107,7 @@ a filtered table survives a refresh and can be linked.
 
 | Layer | Choice | Why |
 |---|---|---|
-| Frontend | React 19 + Vite + TypeScript | Separate deployable from the backend, as required. Vite rather than Next.js because this is a private, client-rendered app with no SEO or SSR need — the Next.js runtime would be weight with no payoff. |
+| Frontend | React 19 + Vite + TypeScript | Separate deployable from the backend, as required. Vite rather than Next.js because this is a private, client-rendered app with no SEO or SSR need; the Next.js runtime would be weight with no payoff. |
 | Styling | Tailwind CSS v4 + Radix UI primitives | A token-driven design system rather than ad-hoc classes. Radix supplies accessible dialog, toggle, and menu behaviour, so keyboard and screen-reader support is not hand-rolled. |
 | Backend | Express 5 + TypeScript (ESM) | A small, explicit HTTP layer, deployed as its own Vercel project so the frontend/backend separation is physical rather than a folder convention. |
 | Validation | Zod, in a shared workspace package | One schema imported by both the API and the browser, so client and server cannot drift on what counts as valid. |
@@ -155,9 +155,9 @@ constraints. The written row comes back and is rendered.
 > path holds a credential that bypasses RLS.**
 
 The Express layer never connects to Postgres. It has no connection string and no Postgres
-driver — `npm test` asserts both. It forwards the caller's own token, so every query it
-makes is already scoped to that caller by RLS. A serious bug in the API — a missing
-filter, a wrong id — still cannot return another user's row, because the credential
+driver; `npm test` asserts both. It forwards the caller's own token, so every query it
+makes is already scoped to that caller by RLS. A serious bug in the API (a missing
+filter, a wrong id) still cannot return another user's row, because the credential
 required to do that does not exist anywhere in the deployment.
 
 Being precise about what that does **not** claim, since overclaiming here would be worse
@@ -180,14 +180,14 @@ than not claiming it at all:
 ## Database schema
 
 Defined in [`db/migrations/001_contacts.sql`](db/migrations/001_contacts.sql) and applied
-with `npm run migrate`. Migrations own the schema **and** the policies — nothing is
+with `npm run migrate`. Migrations own the schema **and** the policies; nothing is
 created by clicking in a console, so every policy is reviewable in a diff.
 
 ### `contacts`
 
 | Column | Type | Constraints | Notes |
 |---|---|---|---|
-| `id` | `uuid` | PK, `default gen_random_uuid()` | Not a sequential integer, on purpose — see above |
+| `id` | `uuid` | PK, `default gen_random_uuid()` | Not a sequential integer, on purpose; see above |
 | `user_id` | `text` | `not null`, `default (auth.user_id())` | The owner. The only column RLS compares |
 | `name` | `text` | `not null`, non-blank, ≤ 200 | `length(btrim(name)) > 0` |
 | `company` | `text` | nullable, ≤ 200 | |
@@ -216,7 +216,7 @@ and adds the `reject_wiki_field_edit()` trigger.
 The migration ledger deliberately lives in a separate `strada_meta` schema. Enabling the
 Data API installs `ALTER DEFAULT PRIVILEGES ... GRANT ... TO authenticated`, so **every**
 table created in `public` is fully writable by every signed-in user unless RLS says
-otherwise. A bookkeeping table should not be defended with policies — it should be
+otherwise. A bookkeeping table should not be defended with policies; it should be
 unreachable, and only `public` is exposed.
 
 ---
@@ -252,7 +252,7 @@ on UPDATE and that pairing is load-bearing: `USING` alone would let a user rewri
 own row's `user_id` and hand the row to someone else.
 
 `FORCE ROW LEVEL SECURITY` matters more than it looks. Without it the table **owner**
-bypasses every policy above — and the owner is the role a migration script or a
+bypasses every policy above, and the owner is the role a migration script or a
 `psql $DATABASE_URL` session connects as.
 
 ### Token facts, decoded from a live token rather than taken from documentation
@@ -289,7 +289,7 @@ a valid signed session, and the RLS policies above protect every row the Data AP
 **Server-only** values are set in the API's Vercel project and never in the web project.
 
 **`DATABASE_URL` is neither.** It is a local tool credential used only by `npm run
-migrate` from a developer machine. It is not set in either Vercel project — the deployed
+migrate` from a developer machine. It is not set in either Vercel project; the deployed
 API has no Postgres driver and no connection string, and reaches the database only through
 the Data API carrying the end user's own JWT.
 
@@ -304,8 +304,8 @@ Three mechanisms keep that true rather than merely stated:
 3. **Scanned.** `npm run check:secrets` greps the built bundle for connection-string
    literals and for the actual *values* of the secret variables, fails if any `.env` file
    other than `.env.example` is tracked in git, and fails if a secret's value has been
-   copied into a `NEXT_PUBLIC_`/`VITE_` name — the mistake that would defeat mechanism 1
-   by making the value legitimately inlinable.
+   copied into a `NEXT_PUBLIC_`/`VITE_` name, the mistake that would defeat
+   mechanism 1 by making the value legitimately inlinable.
 
 That third check has been corrected twice, in opposite directions. Its first version
 grepped the bundle for server-only *variable names*, which could never fail, because Vite
@@ -316,7 +316,7 @@ to call, shipped on purpose as `NEXT_PUBLIC_NEON_AUTH_URL` with the same value, 
 check failed on a correct build. A check that cannot fail proves nothing; a check that
 fails when nothing is wrong gets skipped past, which comes to the same thing. The
 client-exposure check is what that list was reaching for, and it is verified in both
-directions — it passes on the real configuration and fails when a secret is deliberately
+directions: it passes on the real configuration and fails when a secret is deliberately
 pasted into a `NEXT_PUBLIC_` variable.
 
 ---
@@ -331,13 +331,13 @@ npm install
 cp .env.example .env.local     # then fill in real values
 
 npm run migrate                # applies db/migrations/*.sql
-npm test                       # 49 tests, no credentials needed
+npm test                       # 121 tests, no credentials needed
 
 npm run dev:api                # http://localhost:3001
 npm run dev:web                # http://localhost:5177
 ```
 
-Requires Node 24 or newer. There is no `psql` dependency — migrations run through the
+Requires Node 24 or newer. There is no `psql` dependency; migrations run through the
 `pg` driver via `node db/migrate.mjs`.
 
 After any migration, refresh the Data API schema cache:
@@ -350,14 +350,14 @@ For a migration that only ADDS things, skipping this means PostgREST answers
 `PGRST205 table not found` for anything new. For one that **drops or renames a column it
 is a live outage**, and migration 003 caused one: PostgREST had `operator_set` in its
 cached column list, kept naming it in the `SELECT` it generates, and Postgres answered
-`42703 undefined column` — so every read through the API failed while the database itself
+`42703 undefined column`, so every read through the API failed while the database itself
 was perfectly healthy. `notify pgrst, 'reload schema'` is not a reliable substitute; it
 reached only some instances, and reads flapped between 200 and 502 for several minutes
 before the CLI refresh fixed it in one shot.
 
 The ordering rule that follows: **deploy the code first, then migrate, then refresh the
-cache immediately.** Deploying first costs nothing here — the new code tolerates the old
-schema, and only the local sync CLI is affected — whereas migrating first breaks every
+cache immediately.** Deploying first costs nothing here, since the new code tolerates the
+old schema and only the local sync CLI is affected, whereas migrating first breaks every
 edit in the live app for the length of a deploy.
 
 ---
@@ -380,7 +380,7 @@ committed.
 
 `NEXT_PUBLIC_NEON_DATA_API_URL` is deliberately **not** set: the browser never calls the
 Data API directly, so shipping the endpoint to the client would widen the surface for no
-benefit. `NEON_AUTH_COOKIE_SECRET` is unused — the SPA holds a bearer token and there is
+benefit. `NEON_AUTH_COOKIE_SECRET` is unused; the SPA holds a bearer token and there is
 no server-side cookie session to sign.
 
 ---
@@ -388,23 +388,23 @@ no server-side cookie session to sign.
 ## Tests
 
 ```bash
-npm test           # 121 hermetic tests — no credentials, no network, no database
-npm run test:rls   # 22 live tests — the privacy proof and the wiki-layer lock
+npm test           # 121 hermetic tests: no credentials, no network, no database
+npm run test:rls   # 22 live tests: the privacy proof and the wiki-layer lock
 ```
 
 **`npm test` needs no configuration**, so it runs immediately after a clone. It covers:
 
-- **The validation contract** — empty, whitespace-only, missing, and over-length names;
+- **The validation contract.** Empty, whitespace-only, missing, and over-length names;
   every invalid priority (`"urgent"`, `"HIGH"`, `null`, `1`); trimming; empty optional
   fields dropped rather than stored; unknown keys discarded.
-- **Route behaviour** with the upstream mocked — an invalid priority returns 400 **and
+- **Route behaviour** with the upstream mocked. An invalid priority returns 400 **and
   never calls the database**; a missing or malformed bearer returns 401; a
   client-supplied `user_id` is replaced by the verified subject; a client-supplied `id`
   is stripped; a client query string cannot shape the upstream URL; client `Prefer` and
   `Accept-Profile` headers are not forwarded; there is no route for an unfiltered PATCH
   or DELETE; a `WITH CHECK` rejection maps to 403; an RLS-filtered row returns 404
   without revealing whether it exists.
-- **Architectural invariants** — no API source file references `DATABASE_URL` or a
+- **Architectural invariants.** No API source file references `DATABASE_URL` or a
   Postgres driver, no web source file references a server-only variable, `envPrefix` is
   exactly the two public prefixes, and `.gitignore` excludes every `.env` but the example.
 
@@ -423,7 +423,7 @@ as a pass. Run without credentials it **exits 1** with a message naming what is 
 ### A user can sign in and sign out
 
 [Sign-in screen](docs/screenshots/01-sign-in.png) · signing out destroys the session
-server-side, not just in the client — the token endpoint answers 401 afterwards.
+server-side, not just in the client; the token endpoint answers 401 afterwards.
 
 ### Add, view, edit, delete, and it survives refresh
 
@@ -498,7 +498,7 @@ Two accounts sign in for real and the assertions run over HTTP against the **dep
 Data API. Three design choices make this proof mean something:
 
 1. **Not a direct Postgres connection.** `DATABASE_URL` connects as the table owner, and
-   an owner bypasses RLS unless `FORCE ROW LEVEL SECURITY` is set — that version of the
+   an owner bypasses RLS unless `FORCE ROW LEVEL SECURITY` is set; that version of the
    test would pass with the policies deleted. Going over HTTP also exercises JWKS
    verification, the exposed schema, and the grants, none of which a direct connection
    can see.
@@ -506,19 +506,18 @@ Data API. Three design choices make this proof mean something:
    suite would pass with RLS switched off.
 3. **It was proven able to fail.** RLS was deliberately disabled on a throwaway branch
    and the suite re-run: **8 of the 12 assertions failed.** RLS was restored and it went
-   green again. The same treatment was given to the wiki-layer trigger — dropped, suite
-   re-run, **6 of its 10 assertions failed** — because a guard that works produces no
-   event, so a passing suite is not by itself evidence that the test is attached to
-   anything.
+   green again. The same treatment was given to the wiki-layer trigger: dropped, suite
+   re-run, **6 of its 10 assertions failed**. A guard that works produces no event, so a
+   passing suite is not by itself evidence that the test is attached to anything.
 
 That third check corrected an assumption in the design. The positive control ("A can read
-A's row") was supposed to be what prevents a flattering pass — but with RLS off it stayed
+A's row") was supposed to be what prevents a flattering pass, but with RLS off it stayed
 **green**, as did both unauthenticated checks. The assertions that actually caught the
 breakage were the unfiltered read, the two `WITH CHECK` cases, and the wiki-column write.
 
 A fourth stayed green for a subtler reason worth recording: "B cannot read A's wiki
 linkage" passed with RLS off, because an earlier assertion in the same file issues an
-unfiltered `DELETE` that — with RLS off — had already removed the row it looks for. A
+unfiltered `DELETE` that, with RLS off, had already removed the row it looks for. A
 test can be made vacuous by a test that runs before it, which is its own argument for
 checking that a suite fails rather than trusting that it passes.
 
@@ -564,8 +563,8 @@ neon neon-auth domain add https://<your-app>.vercel.app
 ```
 
 Without it the auth endpoint answers `403 {"code":"INVALID_ORIGIN"}`. Nothing in the build
-or the test suite can catch this — the code is byte-identical in both environments and
-only the origin differs — so it is a checklist item rather than a guard.
+or the test suite can catch this; the code is byte-identical in both environments and
+only the origin differs, so it is a checklist item rather than a guard.
 
 Set environment variables for **all three** Vercel environments (Production, Preview,
 Development). A variable set only for Production leaves every preview deploy blank.
@@ -588,11 +587,11 @@ npm run sync                # apply
 The vault is a directory on a laptop. Strada runs on Vercel. A hosted server cannot read
 that directory, and giving it a way to would invert the architecture the rest of this
 README defends. So the sync runs locally and reaches Strada through the same public API
-as the browser, signing in as the same user — it holds no privilege the app does not
+as the browser, signing in as the same user; it holds no privilege the app does not
 already have, and RLS applies to its writes identically.
 
-The web UI shows sync **state** — a mark on wiki-sourced rows, and a footer counting
-them — and cannot trigger a sync.
+The web UI shows sync **state** (a mark on wiki-sourced rows, and a footer counting
+them) and cannot trigger a sync.
 
 ![Wiki-synced contacts](docs/screenshots/10-wiki-synced.png)
 
@@ -608,7 +607,7 @@ vault (local) ─▶ local model ─▶ derived fields ─▶ Strada API ─▶ 
 ```
 
 Extraction runs against a model on the same machine. What leaves is a name, company,
-role, where you met, a priority, and one generated sentence describing who they are —
+role, where you met, a priority, and one generated sentence describing who they are,
 never verbatim page text. The vault contains other people's names, contact details and
 candid assessments; they did not consent to that reaching a hosted service, which is why
 a hosted model is not an option here even though it would extract better.
@@ -621,7 +620,7 @@ than merely unused.
 ### Who the vault says is a person
 
 Most of the network has no entity page and correctly never will. The vault folds people
-into the work they belong to — its own log records **179 fold decisions against 99
+into the work they belong to; its own log records **186 fold decisions against 100
 splits**, and the two-person venture page carries an explicit one: *"Single page for the
 pair rather than two thin person-pages, per fold discipline."* Reading only
 `entities/*.md` therefore found 11 people out of a much larger real network.
@@ -631,10 +630,10 @@ Two frontmatter keys close that gap without unfolding anything:
 | Key | Where | Meaning |
 |---|---|---|
 | `type: person` | an entity page | This entity is a person, not a laptop or a venture |
-| `type: self` | one entity page | The vault owner. Read, never synced — you are not your own contact |
+| `type: self` | one entity page | The vault owner. Read, never synced; you are not your own contact |
 | `people: [A, B]` | any page | This page is the primary source for these people |
 
-`people:` names the people a page is the *primary* source for, not everyone it mentions —
+`people:` names the people a page is the *primary* source for, not everyone it mentions;
 one name appears on six pages and belongs to one of them. Each person is slugged exactly
 as an entity page for them would be (`Rosa Delgado` → `rosa-delgado`), so if someone is
 later promoted to their own page the identity does not move and the contact updates
@@ -648,11 +647,11 @@ silently yields one contact twice.
 
 Neither tag means "keep this person out of my own private, row-level-secured list".
 `visibility/internal` means do not publish. `visibility/pii` marks a page whose **body**
-is sensitive — compensation, routing, things said in confidence.
+is sensitive: compensation, routing, things said in confidence.
 
 Sync never transmits page text, so what a `pii` page contributes is a business card:
 name, company, role, where you met. The one field that could carry the page's substance
-is `bio`, because it is the model's summary *of* that prose — so **`bio` is dropped for a
+is `bio`, because it is the model's summary *of* that prose, so **`bio` is dropped for a
 `pii` source**. The person becomes reachable; the sensitive material stays on the machine.
 
 Excluding those people outright was the earlier default and it made the tracker
@@ -662,11 +661,11 @@ the vault. `--exclude-pii` restores the stricter behaviour.
 
 This was verified before it ran for real, by printing what *would* be sent: the model
 produced 150 and 138 characters of bio for the two `pii`-sourced people and neither left
-the machine. That check matters because the failure is flattering — a broken drop would
+the machine. That check matters because the failure is flattering; a broken drop would
 still report a successful sync.
 
-**Every exclusion is named in the report** — a silent exclusion is indistinguishable from
-a page that was never found.
+**Every exclusion is named in the report**, because a silent exclusion is
+indistinguishable from a page that was never found.
 
 ### Two layers, so there is nothing to arbitrate
 
@@ -679,7 +678,7 @@ A contact that came from the wiki has two halves, and each has exactly one write
 
 `priority` is seeded once when sync first creates the contact and never asserted again.
 It is a judgement about a relationship, not a fact about a person, and the extraction is
-measurably weak at it (see the finding below) — so the wiki gets a first guess and you
+measurably weak at it (see the finding below), so the wiki gets a first guess and you
 keep the decision.
 
 A hand-made contact has no wiki layer at all: every field is yours, and the CRUD
@@ -698,8 +697,8 @@ recording which fields a human had claimed, a `POST /:id/reclaim` endpoint to re
 claim, and a `protected` section in the run report to announce refusals. All of it
 existed to manage a collision. Splitting the columns by owner removes the collision, and
 about eighty lines of arbitration went with it. The lesson that motivated `operator_set`
-is kept — automation must never clobber what a human wrote — but it is now a property of
-which columns each party can write rather than a rule sync has to remember to consult.
+is kept: automation must never clobber what a human wrote. It is now a property of which
+columns each party can write rather than a rule sync has to remember to consult.
 
 Sync never deletes. A contact whose page disappears is reported as `orphaned` and left.
 
@@ -716,19 +715,19 @@ telling apart:
 ![Wiki fields locked in the edit form](docs/screenshots/12-wiki-fields-locked.png)
 
 In the form the wiki fields keep their values but lose their input chrome, and a line
-names the page they come from. Disabling them is a courtesy that explains the model —
+names the page they come from. Disabling them is a courtesy that explains the model;
 the guarantee is the two checks below, not the `disabled` attribute.
 
 The comparison is by **value, not by presence**. The edit form submits every field, so an
 ordinary edit of a wiki-linked contact necessarily restates `name`, `company`, `role` and
 `met_where`. Rejecting a body that merely *mentions* a wiki field would reject every edit,
-including one that only touched notes — so both layers use `IS DISTINCT FROM` and object
+including one that only touched notes, so both layers use `IS DISTINCT FROM` and object
 only to a real change.
 
 **This is a correctness guarantee, not a security boundary, and the difference is not
 cosmetic.** Sync and the browser reach Postgres through the same Data API carrying the
 same end-user JWT, so the database cannot tell them apart by role. The only thing marking
-a write as sync's is that it advances `wiki_synced_at` — and a client holding its own
+a write as sync's is that it advances `wiki_synced_at`, and a client holding its own
 token can set that column too. The trigger stops the application from corrupting its own
 data model; it does not stop the row's owner, and it is not trying to. RLS is the real
 boundary and it defends against a genuinely different thing: *other users*. That claim is
@@ -741,7 +740,7 @@ test fails and this section has to be rewritten.
 ### The report names outcomes, never a total
 
 `created`, `updated` (with the field names), `unchanged`, `excluded`,
-`skipped`, `orphaned`, `failed` — each printed even when empty. "14 synced" would read
+`skipped`, `orphaned`, `failed`, each printed even when empty. "14 synced" would read
 as success whether the run did the right thing, rewrote identical values, or quietly
 refused half its input. A test asserts that running twice produces an all-`unchanged`
 second run.
@@ -751,7 +750,7 @@ second run.
 The first live run marked **every** one of the eleven people `high`. A field with no
 variance carries no information, and priority drives sorting and filtering, so the
 feature was silently useless. The prompt had asked only "how actively worth staying
-close to this person appears to be" — too vague to be a measurement.
+close to this person appears to be", which is too vague to be a measurement.
 
 Two things fixed and confirmed it. The prompt now gives criteria the model can apply
 (high means a specific open loop exists; medium is the common case; seniority is
@@ -760,23 +759,23 @@ Separately, four engineered pages checked that the model can discriminate at all
 clear open loop scored high, while a warm relationship with nothing outstanding, a
 brief encounter, and a very senior contact with no open loop all scored low.
 
-The residual skew is real rather than degenerate — someone only writes a wiki page for
-a person they have live business with — but the lesson is that it took a deliberate
+The residual skew is real rather than degenerate, since someone only writes a wiki page
+for a person they have live business with, but the lesson is that it took a deliberate
 check to tell "the data is like that" apart from "the measurement is broken", and the
 first answer looked exactly like the second.
 
 ### Setup
 
 ```bash
-npm run sync:login    # once — verifies the password, then stores it in the keychain
+npm run sync:login    # once: verifies the password, then stores it in the keychain
 npm run sync          # thereafter
 ```
 
 Needs `STRADA_VAULT_PATH`, `STRADA_API_URL` and `STRADA_SYNC_EMAIL` in `.env.local`
 (gitignored), and LM Studio running locally with a model loaded.
 
-**The password is not one of them.** It is a real account credential — it can read and
-change every contact the account owns — so it is resolved from the macOS keychain first,
+**The password is not one of them.** It is a real account credential that can read and
+change every contact the account owns, so it is resolved from the macOS keychain first,
 then an interactive prompt, and only last from `STRADA_SYNC_PASSWORD`, which prints a
 warning because it means a live password is sitting in plaintext on disk.
 `sync:login` verifies the password against Neon Auth before storing it, so a typo fails
@@ -805,18 +804,18 @@ The screenshot demonstrating wiki sync was taken against the real vault. Eight r
 visible; seven were real people, with names, employers, roles and where they were met.
 It was committed, and the repository was then made public before anyone noticed. GitHub's
 traffic API recorded zero views, zero clones and zero forks for that day, so there is no
-evidence anyone fetched it — but that is luck, not a control, and the exposure window was
+evidence anyone fetched it, but that is luck, not a control, and the exposure window was
 never measured precisely enough to be worth quoting.
 
 Why it was not caught: the image was never referenced from the README. Every review pass
 read the prose, and an unreferenced file is not in the prose. `npm run check:secrets`
-passed the whole time and was right to — it hunts for credentials, and this was
+passed the whole time and was right to; it hunts for credentials, and this was
 disclosure of other people's information, which no grep for `npg_` will ever find.
 
 What changed: the repository was made private, every commit was rewritten to purge the
 image and the names from history, and the result was verified from a fresh clone. The
 test account was rebuilt on a fictional cast, and every screenshot in this README is shot
-against that account. The durable fix is upstream of any scanner — demo data is fictional,
+against that account. The durable fix is upstream of any scanner: demo data is fictional,
 so a screenshot cannot leak something real.
 
 The residue is honest: rewriting history does not unpublish anything that was already
@@ -832,15 +831,15 @@ unconditionally and proved nothing.
 
 Version two searched for the *values* instead, and included `NEON_AUTH_BASE_URL` in the
 list. That URL is the sign-in endpoint the browser has to call and ships on purpose as
-`NEXT_PUBLIC_NEON_AUTH_URL`, so the check failed on every correct build — and it went
+`NEXT_PUBLIC_NEON_AUTH_URL`, so the check failed on every correct build, and it went
 unnoticed because it only fails when run with the API's environment loaded, which is not
 how anyone runs it casually.
 
 A check that cannot fail and a check that always fails are the same check. Both teach you
 to stop reading the output.
 
-What changed: the current version checks the thing the list was reaching for — a secret's
-value copied into a `NEXT_PUBLIC_`/`VITE_` name, which Vite would then inline by design —
+What changed: the current version checks the thing the list was reaching for, a secret's
+value copied into a `NEXT_PUBLIC_`/`VITE_` name that Vite would then inline by design,
 and it is verified in both directions, passing on the real configuration and failing when
 a secret is deliberately planted in a public variable. The three mechanisms it sits
 alongside are in [Secrets](#secrets-publishable-versus-server-only).
@@ -853,15 +852,15 @@ undefined column`. Every read through the deployed API failed while the database
 was entirely healthy.
 
 Two things made it worse than it needed to be. `notify pgrst, 'reload schema'` looked like
-it worked — reads recovered for a minute, then failed again, because only some instances
+it worked: reads recovered for a minute, then failed again, because only some instances
 had reloaded, and an intermittent fault is much easier to misdiagnose than a constant one.
 And the first sampling of the deployed API printed only status codes, so a `200` that was
 in fact a stale-cache flap read as a recovery.
 
 What changed: `neon data-api refresh-schema` fixed it in one call and is now the
 documented step, printed by `db/migrate.mjs` after every migration with an explicit
-warning for drops and renames. The deployment order is written down too — see
-[Deployment](#deployment) — deploy the code, then migrate, then refresh, because the
+warning for drops and renames. The deployment order is written down too (see
+[Deployment](#deployment)): deploy the code, then migrate, then refresh, because the
 reverse breaks every edit in the live app for the length of a deploy.
 
 ### A passing test hid a broken trigger
@@ -870,7 +869,7 @@ The first version of the wiki-layer trigger built its list of changed columns wi
 `changed := changed || 'name'`, which makes Postgres parse the right operand as an array
 literal. The trigger raised `malformed array literal` instead of the intended rejection.
 
-The test asserted that the write was refused. It *was* refused — by a syntax error. The
+The test asserted that the write was refused. It *was* refused, by a syntax error. The
 assertion passed on a completely broken trigger.
 
 What changed: `array_append`, and more importantly the test now asserts on the sqlstate
@@ -879,7 +878,7 @@ this project were then deliberately broken to confirm the tests notice: dropping
 trigger fails 6 of its 10 assertions, and disabling RLS fails 8 of 12.
 
 That second experiment found something else worth keeping. One assertion stayed green
-with RLS switched off — not because it was weak, but because an earlier assertion in the
+with RLS switched off, not because it was weak, but because an earlier assertion in the
 same file issues an unfiltered `DELETE`, which with RLS off had already removed the row it
 looks for. A test can be made vacuous by a test that runs before it.
 
@@ -894,7 +893,7 @@ than the data.
 
 The design changed as well, not just the prompt. `priority` is now seeded once and then
 owned by the operator, because it is a judgement about a relationship rather than a fact
-about a person — and a signal known to be weak should not be re-asserted over a human's
+about a person, and a signal known to be weak should not be re-asserted over a human's
 correction on every run.
 
 ---
@@ -928,5 +927,5 @@ correction on every run.
   and this is the field where that silent rewrite is most surprising.
 - **The RLS suite is destructive by design.** One assertion issues an unfiltered
   `DELETE`, which is safe only while RLS works. Point it at a throwaway branch, never at
-  data that matters — running it with RLS disabled empties the table, which is exactly
+  data that matters; running it with RLS disabled empties the table, which is exactly
   what happened once while proving the suite could fail.
