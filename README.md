@@ -640,6 +640,13 @@ keep the decision.
 A hand-made contact has no wiki layer at all: every field is yours, and the CRUD
 behaviour is exactly what it was before any of this existed.
 
+![A contact's two layers](docs/screenshots/11-two-layers.png)
+
+Expanding a wiki-linked contact shows both: the wiki's account of the person in the
+faint ink it uses for reference material, and your own notes below it in the ink used
+for things you wrote. The three rows without the ◆ mark are hand-made and have no upper
+half at all.
+
 **This replaced a per-field claim system, and the replacement is smaller.** The previous
 design let sync and the app both write `notes`, then arbitrated: an `operator_set` column
 recording which fields a human had claimed, a `POST /:id/reclaim` endpoint to release a
@@ -660,6 +667,12 @@ telling apart:
    field. This is the half that produces a good error message.
 2. **A `BEFORE UPDATE` trigger** (migration 003) refuses the write at the database. This
    is the half that still holds when the API is wrong.
+
+![Wiki fields locked in the edit form](docs/screenshots/12-wiki-fields-locked.png)
+
+In the form the wiki fields keep their values but lose their input chrome, and a line
+names the page they come from. Disabling them is a courtesy that explains the model —
+the guarantee is the two checks below, not the `disabled` attribute.
 
 The comparison is by **value, not by presence**. The edit form submits every field, so an
 ordinary edit of a wiki-linked contact necessarily restates `name`, `company`, `role` and
