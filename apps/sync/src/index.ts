@@ -1,6 +1,12 @@
 #!/usr/bin/env node
 import type { WikiRecord } from "@strada/shared";
-import { DEFAULT_POLICY, applyVisibility, readEntities } from "./vault.js";
+import {
+  DEFAULT_POLICY,
+  applyVisibility,
+  readEntities,
+  readPeopleSources,
+  type VaultEntity,
+} from "./vault.js";
 import { ExtractionError, extractOne, toRecord } from "./extract.js";
 import { pushRecords, signIn, type StradaConfig } from "./client.js";
 import { resolvePassword } from "./credentials.js";
@@ -32,7 +38,10 @@ function parseArgs(argv: string[]): Options {
   const limit = value("--limit");
   return {
     dryRun: has("--dry-run"),
-    includePii: has("--include-pii"),
+    // Included by default since a pii source contributes identity fields only — the
+    // model's summary of the sensitive prose is dropped in toRecord. `--exclude-pii`
+    // keeps those people out of the tracker entirely.
+    includePii: !has("--exclude-pii"),
     includeInternal: !has("--exclude-internal"),
     limit: limit ? Number(limit) : null,
     model: value("--model") ?? process.env.STRADA_SYNC_MODEL ?? "gemma-4-31b-it-mlx",
@@ -71,15 +80,29 @@ async function main(): Promise<void> {
 
   console.log(`Reading ${vaultPath} (read-only)…`);
   const entities = readEntities(vaultPath);
-  const { included, excluded } = applyVisibility(entities, {
+
+  // People also live on pages that are not about them alone — the vault folds them into
+  // the work they belong to. A `people:` list makes those reachable without unfolding
+  // anything. See readPeopleSources.
+  const peopleSources = readPeopleSources(vaultPath);
+
+  // An entity page is the richer source, so it wins a slug collision. Without this,
+  // someone who has both an entity page and a `people:` mention would be extracted
+  // twice and the second pass would overwrite the first.
+  const bySlug = new Map<string, VaultEntity>();
+  for (const source of peopleSources) bySlug.set(source.slug, source);
+  for (const entity of entities) bySlug.set(entity.slug, entity);
+  const allSources = [...bySlug.values()].sort((a, b) => a.slug.localeCompare(b.slug));
+
+  const { included, excluded } = applyVisibility(allSources, {
     includePii: opts.includePii,
     includeInternal: opts.includeInternal,
   });
 
   const considered = opts.limit ? included.slice(0, opts.limit) : included;
   console.log(
-    `  ${entities.length} entities · ${considered.length} to read · ` +
-      `${excluded.length} excluded by visibility`,
+    `  ${entities.length} entities · ${peopleSources.length} people on folded pages · ` +
+      `${considered.length} to read · ${excluded.length} excluded by visibility`,
   );
   console.log(`Extracting locally with ${opts.model} (nothing leaves this machine)…`);
 

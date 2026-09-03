@@ -85,6 +85,23 @@ Rules:
 PAGE:
 `;
 
+/**
+ * Scope the prompt to one person when the page is about several.
+ *
+ * A page carrying a `people:` list is usually about the work, not the person — a hire
+ * track, a pitch, a course. Without naming the target, the model returns whichever
+ * person it noticed first, and a two-person page silently yields one contact twice.
+ */
+function promptFor(entity: VaultEntity & { person?: string }): string {
+  if (!entity.person) return PROMPT;
+  return (
+    PROMPT +
+    `\nTHIS PAGE MENTIONS SEVERAL PEOPLE. Extract ONLY ${entity.person}. ` +
+    `Ignore everyone else on the page, including the page's author. If the page does ` +
+    `not describe ${entity.person} as a person, set is_person to false.\n`
+  );
+}
+
 export interface ExtractorConfig {
   baseUrl: string;
   model: string;
@@ -109,7 +126,9 @@ export async function extractOne(
       body: JSON.stringify({
         model: config.model,
         temperature: 0,
-        messages: [{ role: "user", content: PROMPT + entity.body.slice(0, 8000) }],
+        messages: [
+          { role: "user", content: promptFor(entity) + entity.body.slice(0, 8000) },
+        ],
         response_format: {
           type: "json_schema",
           json_schema: { name: "contact", strict: true, schema: RESPONSE_SCHEMA },
@@ -177,7 +196,14 @@ export function toRecord(
     company: blank(extraction.company),
     role: blank(extraction.role),
     met_where: blank(extraction.met_where),
-    bio: blank(extraction.bio),
+    // A sensitive page contributes a card, never a summary.
+    //
+    // Sync never transmits page text, so name/company/role/met_where are a business
+    // card and carry none of what makes a page sensitive. `bio` is different in kind:
+    // it is the model's summary OF that prose, and it is the one field that can carry
+    // the page's substance off the machine. On a `visibility/pii` source it is dropped
+    // rather than sent, so the person is reachable and the sensitive material is not.
+    bio: entity.visibility === "pii" ? null : blank(extraction.bio),
     priority: extraction.priority,
   };
 }

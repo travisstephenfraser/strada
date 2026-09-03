@@ -19,7 +19,7 @@ Frontend   React 19 + Vite + TypeScript + Tailwind v4      Vercel (project A)
 Backend    Express 5 + TypeScript                          Vercel (project B)
 Database   Neon Postgres, RLS on the contacts table
 Auth       Neon Managed Better Auth (Ed25519 JWT)
-Tests      135 automated (113 hermetic + 22 live)
+Tests      143 automated (121 hermetic + 22 live)
 ```
 
 ---
@@ -388,7 +388,7 @@ no server-side cookie session to sign.
 ## Tests
 
 ```bash
-npm test           # 113 hermetic tests — no credentials, no network, no database
+npm test           # 121 hermetic tests — no credentials, no network, no database
 npm run test:rls   # 22 live tests — the privacy proof and the wiki-layer lock
 ```
 
@@ -528,7 +528,7 @@ checking that a suite fails rather than trusting that it passes.
 $ npm test
 
  Test Files  6 passed (6)
-      Tests  113 passed (113)
+      Tests  121 passed (121)
 ```
 
 Full output: [`docs/test-output-unit.txt`](docs/test-output-unit.txt) ·
@@ -618,11 +618,55 @@ moves, no git operations, not even a status check. Verified by checksumming ever
 page before and after three full runs. A write-back path is deliberately absent rather
 than merely unused.
 
-Pages tagged `visibility/pii` are excluded by default; `visibility/internal` pages are
-included, because "do not publish" is not the same as "do not put in my own private,
-row-level-secured list". Both are overridable (`--include-pii`, `--exclude-internal`),
-and **every exclusion is named in the report** — a silent exclusion is indistinguishable
-from a page that was never found.
+### Who the vault says is a person
+
+Most of the network has no entity page and correctly never will. The vault folds people
+into the work they belong to — its own log records **179 fold decisions against 99
+splits**, and the two-person venture page carries an explicit one: *"Single page for the
+pair rather than two thin person-pages, per fold discipline."* Reading only
+`entities/*.md` therefore found 11 people out of a much larger real network.
+
+Two frontmatter keys close that gap without unfolding anything:
+
+| Key | Where | Meaning |
+|---|---|---|
+| `type: person` | an entity page | This entity is a person, not a laptop or a venture |
+| `type: self` | one entity page | The vault owner. Read, never synced — you are not your own contact |
+| `people: [A, B]` | any page | This page is the primary source for these people |
+
+`people:` names the people a page is the *primary* source for, not everyone it mentions —
+one name appears on six pages and belongs to one of them. Each person is slugged exactly
+as an entity page for them would be (`Rosa Delgado` → `rosa-delgado`), so if someone is
+later promoted to their own page the identity does not move and the contact updates
+instead of duplicating. An entity page wins a slug collision, being the richer source.
+
+For a page carrying several people the extraction prompt is scoped to one name at a time;
+without that the model returns whichever person it noticed first and a two-person page
+silently yields one contact twice.
+
+### Both visibility tags are included, and one field is not
+
+Neither tag means "keep this person out of my own private, row-level-secured list".
+`visibility/internal` means do not publish. `visibility/pii` marks a page whose **body**
+is sensitive — compensation, routing, things said in confidence.
+
+Sync never transmits page text, so what a `pii` page contributes is a business card:
+name, company, role, where you met. The one field that could carry the page's substance
+is `bio`, because it is the model's summary *of* that prose — so **`bio` is dropped for a
+`pii` source**. The person becomes reachable; the sensitive material stays on the machine.
+
+Excluding those people outright was the earlier default and it made the tracker
+arbitrarily incomplete: eleven real people were already synced to the same hosted
+database while one relationship was held out on a tag describing prose that never leaves
+the vault. `--exclude-pii` restores the stricter behaviour.
+
+This was verified before it ran for real, by printing what *would* be sent: the model
+produced 150 and 138 characters of bio for the two `pii`-sourced people and neither left
+the machine. That check matters because the failure is flattering — a broken drop would
+still report a successful sync.
+
+**Every exclusion is named in the report** — a silent exclusion is indistinguishable from
+a page that was never found.
 
 ### Two layers, so there is nothing to arbitrate
 
