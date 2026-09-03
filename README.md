@@ -19,7 +19,7 @@ Frontend   React 19 + Vite + TypeScript + Tailwind v4      Vercel (project A)
 Backend    Express 5 + TypeScript                          Vercel (project B)
 Database   Neon Postgres, RLS on the contacts table
 Auth       Neon Managed Better Auth (Ed25519 JWT)
-Tests      116 automated (104 hermetic + 12 live RLS)
+Tests      135 automated (113 hermetic + 22 live)
 ```
 
 ---
@@ -199,6 +199,19 @@ created by clicking in a console, so every policy is reviewable in a diff.
 
 Also created: an index on `user_id`, and the `set_updated_at()` trigger.
 
+Migrations 002 and 003 add the optional wiki-sync columns. They are additive and
+nullable, so the ten columns above behave exactly as specified whether or not the sync is
+ever run:
+
+| Column | Type | Constraints | Notes |
+|---|---|---|---|
+| `wiki_slug` | `text` | nullable, ≤ 200, unique per user | Which wiki page this contact came from. Null for hand-made contacts |
+| `bio` | `text` | nullable, ≤ 2000 | The wiki's summary of the person. Wiki-owned |
+| `wiki_synced_at` | `timestamptz` | nullable | When sync last wrote. Also what the wiki-layer trigger keys on |
+
+Migration 003 also drops `operator_set` (see [Two layers](#two-layers-so-there-is-nothing-to-arbitrate))
+and adds the `reject_wiki_field_edit()` trigger.
+
 The migration ledger deliberately lives in a separate `strada_meta` schema. Enabling the
 Data API installs `ALTER DEFAULT PRIVILEGES ... GRANT ... TO authenticated`, so **every**
 table created in `public` is fully writable by every signed-in user unless RLS says
@@ -357,8 +370,8 @@ no server-side cookie session to sign.
 ## Tests
 
 ```bash
-npm test           # 104 hermetic tests — no credentials, no network, no database
-npm run test:rls   # 12 live tests — the two-account privacy proof
+npm test           # 113 hermetic tests — no credentials, no network, no database
+npm run test:rls   # 22 live tests — the privacy proof and the wiki-layer lock
 ```
 
 **`npm test` needs no configuration**, so it runs immediately after a clone. It covers:
@@ -428,24 +441,39 @@ And a `priority` that somehow reached the database would still be refused by the
 
 ### User A cannot see or change User B's contacts
 
+Two live suites run here. `two-account.test.ts` is the privacy proof below;
+`wiki-layer.test.ts` proves the wiki layer is locked in the database rather than only in
+`apps/api`, and ends by demonstrating the limit of that lock rather than implying it has
+none.
+
 ```console
 $ npm run test:rls
 
- ✓ User A's row, as seen by User A (positive control) > A can read the row A created 94ms
- ✓ User B cannot SEE User A's contacts > B's unfiltered read of the whole table does not contain A's row 31ms
- ✓ User B cannot SEE User A's contacts > B cannot read A's row even when asking for it by id 31ms
+ ✓ the wiki layer is read-only to an ordinary write > refuses a change to name on a wiki-linked row 29ms
+ ✓ the wiki layer is read-only to an ordinary write > refuses a change to company on a wiki-linked row 29ms
+ ✓ the wiki layer is read-only to an ordinary write > refuses a change to role on a wiki-linked row 31ms
+ ✓ the wiki layer is read-only to an ordinary write > refuses a change to met_where on a wiki-linked row 30ms
+ ✓ the wiki layer is read-only to an ordinary write > refuses a change to bio on a wiki-linked row 98ms
+ ✓ the wiki layer is read-only to an ordinary write > leaves the value in place after a refusal 59ms
+ ✓ everything else still works > allows an edit that restates wiki fields without changing them 30ms
+ ✓ everything else still works > allows the operator's own layer to change freely 30ms
+ ✓ everything else still works > leaves a hand-made contact fully editable 29ms
+ ✓ the limit of this guarantee, stated rather than hidden > lets a caller who sets wiki_synced_at through: this is not a security boundary 61ms
+ ✓ User A's row, as seen by User A (positive control) > A can read the row A created 32ms
+ ✓ User B cannot SEE User A's contacts > B's unfiltered read of the whole table does not contain A's row 32ms
+ ✓ User B cannot SEE User A's contacts > B cannot read A's row even when asking for it by id 30ms
  ✓ User B cannot CHANGE User A's contacts > B's update of A's row affects nothing 61ms
- ✓ User B cannot CHANGE User A's contacts > B's delete of A's row removes nothing 61ms
+ ✓ User B cannot CHANGE User A's contacts > B's delete of A's row removes nothing 126ms
  ✓ User B cannot CHANGE User A's contacts > B's unfiltered delete cannot reach A's rows 87ms
- ✓ Ownership cannot be handed to another user (WITH CHECK) > A cannot create a row owned by B 30ms
- ✓ Ownership cannot be handed to another user (WITH CHECK) > A cannot move their own row to B 60ms
- ✓ The wiki-sync columns do not weaken ownership > B cannot read A's wiki linkage 59ms
- ✓ The wiki-sync columns do not weaken ownership > B cannot claim a field on A's row by writing operator_set 128ms
- ✓ An unauthenticated caller reaches nothing > the Data API refuses a request with no token 27ms
- ✓ An unauthenticated caller reaches nothing > the Data API refuses a forged token 27ms
+ ✓ Ownership cannot be handed to another user (WITH CHECK) > A cannot create a row owned by B 32ms
+ ✓ Ownership cannot be handed to another user (WITH CHECK) > A cannot move their own row to B 76ms
+ ✓ The wiki-sync columns do not weaken ownership > B cannot read A's wiki linkage 60ms
+ ✓ The wiki-sync columns do not weaken ownership > B cannot write A's wiki layer, sync stamp or not 62ms
+ ✓ An unauthenticated caller reaches nothing > the Data API refuses a request with no token 26ms
+ ✓ An unauthenticated caller reaches nothing > the Data API refuses a forged token 28ms
 
- Test Files  1 passed (1)
-      Tests  12 passed (12)
+ Test Files  2 passed (2)
+      Tests  22 passed (22)
 ```
 
 Two accounts sign in for real and the assertions run over HTTP against the **deployed**
@@ -458,13 +486,23 @@ Data API. Three design choices make this proof mean something:
    can see.
 2. **B's reads carry no `WHERE` clause.** A filter would quietly do RLS's job and the
    suite would pass with RLS switched off.
-3. **It was proven able to fail.** RLS was deliberately disabled and the suite re-run:
-   **7 of the 10 assertions failed.** RLS was restored and it went green again.
+3. **It was proven able to fail.** RLS was deliberately disabled on a throwaway branch
+   and the suite re-run: **8 of the 12 assertions failed.** RLS was restored and it went
+   green again. The same treatment was given to the wiki-layer trigger — dropped, suite
+   re-run, **6 of its 10 assertions failed** — because a guard that works produces no
+   event, so a passing suite is not by itself evidence that the test is attached to
+   anything.
 
 That third check corrected an assumption in the design. The positive control ("A can read
 A's row") was supposed to be what prevents a flattering pass — but with RLS off it stayed
 **green**, as did both unauthenticated checks. The assertions that actually caught the
-breakage were the unfiltered read and the two `WITH CHECK` cases.
+breakage were the unfiltered read, the two `WITH CHECK` cases, and the wiki-column write.
+
+A fourth stayed green for a subtler reason worth recording: "B cannot read A's wiki
+linkage" passed with RLS off, because an earlier assertion in the same file issues an
+unfiltered `DELETE` that — with RLS off — had already removed the row it looks for. A
+test can be made vacuous by a test that runs before it, which is its own argument for
+checking that a suite fails rather than trusting that it passes.
 
 ### At least one automated test passes
 
@@ -472,7 +510,7 @@ breakage were the unfiltered read and the two `WITH CHECK` cases.
 $ npm test
 
  Test Files  6 passed (6)
-      Tests  104 passed (104)
+      Tests  113 passed (113)
 ```
 
 Full output: [`docs/test-output-unit.txt`](docs/test-output-unit.txt) ·
@@ -552,7 +590,7 @@ vault (local) ─▶ local model ─▶ derived fields ─▶ Strada API ─▶ 
 ```
 
 Extraction runs against a model on the same machine. What leaves is a name, company,
-role, where you met, a priority, and one generated sentence about what to discuss next —
+role, where you met, a priority, and one generated sentence describing who they are —
 never verbatim page text. The vault contains other people's names, contact details and
 candid assessments; they did not consent to that reaching a hosted service, which is why
 a hosted model is not an option here even though it would extract better.
@@ -568,25 +606,66 @@ row-level-secured list". Both are overridable (`--include-pii`, `--exclude-inter
 and **every exclusion is named in the report** — a silent exclusion is indistinguishable
 from a page that was never found.
 
-### Your edits win
+### Two layers, so there is nothing to arbitrate
 
-A field you edit in the app is marked operator-owned, and sync will not overwrite it —
-it reports the refusal instead:
+A contact that came from the wiki has two halves, and each has exactly one writer:
 
-```
-kept your edits (wiki wanted to change these; you own them) (1)
-    rosa-delgado  ✋ notes
-```
+| Layer | Fields | Written by | Read-only to |
+|---|---|---|---|
+| Wiki | `name`, `company`, `role`, `met_where`, `bio` | sync, every run | the app |
+| Yours | `notes`, `priority` | the app | sync, always |
 
-Fields you have not touched keep tracking the wiki. To hand a field back, clear the
-claim with `POST /api/contacts/:id/reclaim`; without that, a contact would slowly ossify
-as every later wiki improvement was refused.
+`priority` is seeded once when sync first creates the contact and never asserted again.
+It is a judgement about a relationship, not a fact about a person, and the extraction is
+measurably weak at it (see the finding below) — so the wiki gets a first guess and you
+keep the decision.
+
+A hand-made contact has no wiki layer at all: every field is yours, and the CRUD
+behaviour is exactly what it was before any of this existed.
+
+**This replaced a per-field claim system, and the replacement is smaller.** The previous
+design let sync and the app both write `notes`, then arbitrated: an `operator_set` column
+recording which fields a human had claimed, a `POST /:id/reclaim` endpoint to release a
+claim, and a `protected` section in the run report to announce refusals. All of it
+existed to manage a collision. Splitting the columns by owner removes the collision, and
+about eighty lines of arbitration went with it. The lesson that motivated `operator_set`
+is kept — automation must never clobber what a human wrote — but it is now a property of
+which columns each party can write rather than a rule sync has to remember to consult.
 
 Sync never deletes. A contact whose page disappears is reported as `orphaned` and left.
 
+### Where the lock actually lives, and what it is worth
+
+The app cannot change a wiki-owned field. That is enforced twice, and the two are worth
+telling apart:
+
+1. **`apps/api`** compares the patch against the stored row and answers `403` naming the
+   field. This is the half that produces a good error message.
+2. **A `BEFORE UPDATE` trigger** (migration 003) refuses the write at the database. This
+   is the half that still holds when the API is wrong.
+
+The comparison is by **value, not by presence**. The edit form submits every field, so an
+ordinary edit of a wiki-linked contact necessarily restates `name`, `company`, `role` and
+`met_where`. Rejecting a body that merely *mentions* a wiki field would reject every edit,
+including one that only touched notes — so both layers use `IS DISTINCT FROM` and object
+only to a real change.
+
+**This is a correctness guarantee, not a security boundary, and the difference is not
+cosmetic.** Sync and the browser reach Postgres through the same Data API carrying the
+same end-user JWT, so the database cannot tell them apart by role. The only thing marking
+a write as sync's is that it advances `wiki_synced_at` — and a client holding its own
+token can set that column too. The trigger stops the application from corrupting its own
+data model; it does not stop the row's owner, and it is not trying to. RLS is the real
+boundary and it defends against a genuinely different thing: *other users*. That claim is
+proved separately in `tests/rls/two-account.test.ts`.
+
+The bypass is not left as an inference. `tests/rls/wiki-layer.test.ts` ends with a test
+that performs it and asserts it succeeds, so if this guarantee ever strengthens, that
+test fails and this section has to be rewritten.
+
 ### The report names outcomes, never a total
 
-`created`, `updated` (with the field names), `unchanged`, `protected`, `excluded`,
+`created`, `updated` (with the field names), `unchanged`, `excluded`,
 `skipped`, `orphaned`, `failed` — each printed even when empty. "14 synced" would read
 as success whether the run did the right thing, rewrote identical values, or quietly
 refused half its input. A test asserts that running twice produces an all-`unchanged`
@@ -657,8 +736,12 @@ of invented people, and a test fails if any source file contains a vault path.
 - **Wiki sync is optional and local.** It cannot run on Vercel, so a fresh clone with no
   vault simply never uses it. Extraction quality is bounded by whichever local model is
   loaded, and a hosted model is deliberately not an option.
-- **A reclaimed field is all-or-nothing.** `reclaim` clears every claim on a contact
-  rather than one field. Per-field release would be the obvious next step.
+- **A wiki field can only be corrected in the wiki.** There is no "detach this contact
+  from its page" action and no way to override one field locally. Editing the vault page
+  and re-syncing is the only path, which is right for a fact that is wrong in the vault
+  and awkward for one you simply want to say differently here.
+- **`name` is wiki-owned, so renaming a page renames the contact.** Names are identity,
+  and this is the field where that silent rewrite is most surprising.
 - **The RLS suite is destructive by design.** One assertion issues an unfiltered
   `DELETE`, which is safe only while RLS works. Point it at a throwaway branch, never at
   data that matters — running it with RLS disabled empties the table, which is exactly

@@ -112,7 +112,7 @@ const goodExtraction = {
   role: "Research engineer",
   met_where: "Thursday reading group",
   priority: "high",
-  talking_point: "Compare notes on grading rubrics next term.",
+  bio: "Runs the statistics teaching group; works on grader agreement.",
 };
 
 describe("the model's output is untrusted input", () => {

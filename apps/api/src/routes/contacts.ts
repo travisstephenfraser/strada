@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import {
+  WIKI_OWNED_FIELDS,
   contactInputSchema,
   contactPatchSchema,
   fieldErrors,
@@ -7,7 +8,6 @@ import {
   type Contact,
 } from "@strada/shared";
 import { DataApiClient, mapUpstreamError } from "../dataApi.js";
-import { claimedFields } from "./sync.js";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -19,6 +19,36 @@ const UUID_RE =
  */
 function uuidParam(value: string | string[] | undefined): string | null {
   return typeof value === "string" && UUID_RE.test(value) ? value : null;
+}
+
+/**
+ * Which wiki-owned fields this patch would actually CHANGE.
+ *
+ * The comparison is by value, not by presence. The edit form submits every field, so an
+ * ordinary edit of a wiki-linked contact necessarily restates `name`, `company`, `role`
+ * and `met_where`; rejecting a restatement would reject every edit, including one that
+ * only touched notes. Only a real change is a conflict.
+ *
+ * A hand-made contact has no wiki layer and never conflicts.
+ *
+ * This is the friendly half of the guarantee — it produces a 403 naming the field. The
+ * database trigger in migration 003 is the half that holds when this code is wrong.
+ */
+function changedWikiFields(
+  patch: Record<string, unknown>,
+  existing: Contact,
+): string[] {
+  if (!existing.wiki_slug) return [];
+  const same = (a: unknown, b: unknown) => {
+    const norm = (v: unknown) =>
+      v === undefined || v === null ? "" : typeof v === "string" ? v.trim() : v;
+    return norm(a) === norm(b);
+  };
+  return WIKI_OWNED_FIELDS.filter(
+    (field) =>
+      field in patch &&
+      !same(patch[field], (existing as unknown as Record<string, unknown>)[field]),
+  );
 }
 
 /**
@@ -95,9 +125,7 @@ export function createContactsRouter(dataApi: DataApiClient): Router {
       return;
     }
 
-    // Editing in the app claims those fields for the human: wiki sync will not
-    // overwrite them again. Read the current set first so a claim is additive rather
-    // than replacing what earlier edits established.
+    // A wiki-linked contact has a read-only layer, so read the row before writing it.
     const before = await dataApi.request<Contact[]>({
       token: req.accessToken!,
       method: "GET",
@@ -114,16 +142,24 @@ export function createContactsRouter(dataApi: DataApiClient): Router {
       res.status(404).json({ error: "Contact not found." });
       return;
     }
-    const operator_set = [
-      ...new Set([...(existing.operator_set ?? []), ...claimedFields(parsed.data)]),
-    ];
+
+    const conflicts = changedWikiFields(parsed.data, existing);
+    if (conflicts.length > 0) {
+      res.status(403).json({
+        error: `That contact comes from your wiki page "${existing.wiki_slug}". Edit the page and sync again.`,
+        fields: Object.fromEntries(
+          conflicts.map((f) => [f, "This comes from your wiki and cannot be edited here."]),
+        ),
+      });
+      return;
+    }
 
     const result = await dataApi.request<Contact[]>({
       token: req.accessToken!,
       method: "PATCH",
       table: "contacts",
       filters: { id: `eq.${id}` },
-      body: { ...parsed.data, operator_set },
+      body: parsed.data,
       // Belt to the path-parameter braces: if a filter ever matched more than one row,
       // PostgREST refuses the write rather than applying it.
       prefer: ["max-affected=1", "handling=strict"],
@@ -139,42 +175,6 @@ export function createContactsRouter(dataApi: DataApiClient): Router {
     if (!contact) {
       // RLS filtered the row out: it belongs to someone else, or it does not exist.
       // Both answer 404 — telling them apart would be an existence oracle.
-      res.status(404).json({ error: "Contact not found." });
-      return;
-    }
-    res.json({ contact });
-  });
-
-  /**
-   * Hand a contact's fields back to the wiki by clearing operator_set.
-   *
-   * A separate route rather than an option on PATCH, because PATCH's whole job is to
-   * CLAIM fields — letting the same call also release them would make the claiming rule
-   * depend on body contents, which is how a safety property becomes a footgun.
-   */
-  router.post("/:id/reclaim", async (req: Request, res: Response) => {
-    const id = uuidParam(req.params.id);
-    if (!id) {
-      res.status(400).json({ error: "Not a valid contact id." });
-      return;
-    }
-
-    const result = await dataApi.request<Contact[]>({
-      token: req.accessToken!,
-      method: "PATCH",
-      table: "contacts",
-      filters: { id: `eq.${id}` },
-      body: { operator_set: [] },
-      prefer: ["max-affected=1", "handling=strict"],
-    });
-
-    if (result.error) {
-      const mapped = mapUpstreamError(result);
-      res.status(mapped.status).json(mapped.body);
-      return;
-    }
-    const contact = first(result.data);
-    if (!contact) {
       res.status(404).json({ error: "Contact not found." });
       return;
     }

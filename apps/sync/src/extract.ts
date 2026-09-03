@@ -20,7 +20,7 @@ const RESPONSE_SCHEMA = {
     role: { type: "string" },
     met_where: { type: "string" },
     priority: { type: "string", enum: [...PRIORITIES] },
-    talking_point: { type: "string" },
+    bio: { type: "string" },
   },
   required: [
     "is_person",
@@ -29,7 +29,7 @@ const RESPONSE_SCHEMA = {
     "role",
     "met_where",
     "priority",
-    "talking_point",
+    "bio",
   ],
 } as const;
 
@@ -47,7 +47,7 @@ const extractionSchema = z.object({
   role: z.string(),
   met_where: z.string(),
   priority: z.enum(PRIORITIES),
-  talking_point: z.string(),
+  bio: z.string(),
 });
 
 export type Extraction = z.infer<typeof extractionSchema>;
@@ -70,8 +70,10 @@ Rules:
 - If is_person is false, set every other string field to "" and priority to "low".
 - company, role, met_where: take from the page. Use "" if the page does not say.
   Never invent a value.
-- talking_point: ONE short sentence, in your own words, about what to discuss with this
-  person next time. Do NOT copy sentences from the page.
+- bio: ONE or TWO short sentences, in your own words, describing who this person is and
+  what they work on. Do NOT copy sentences from the page. Describe the person; do not
+  suggest what to do about them — what to do next is the operator's to write, not
+  yours.
 - priority: use these definitions, and note that MEDIUM is the common case.
     high   — there is a specific open loop: an unanswered message, a promised follow-up,
              an introduction in flight, or an explicitly agreed next conversation.
@@ -175,7 +177,7 @@ export function toRecord(
     company: blank(extraction.company),
     role: blank(extraction.role),
     met_where: blank(extraction.met_where),
-    notes: blank(extraction.talking_point),
+    bio: blank(extraction.bio),
     priority: extraction.priority,
   };
 }

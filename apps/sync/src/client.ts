@@ -26,7 +26,6 @@ export interface SyncReport {
   created: string[];
   updated: { wiki_slug: string; fields: string[] }[];
   unchanged: string[];
-  protected: { wiki_slug: string; fields: string[] }[];
   orphaned: { wiki_slug: string; name: string }[];
   failed: { wiki_slug: string; error: string }[];
 }

@@ -20,6 +20,7 @@ export const LIMITS = {
   company: 200,
   role: 200,
   metWhere: 200,
+  bio: 2_000,
   notes: 10_000,
 } as const;
 
@@ -80,6 +81,8 @@ export interface Contact {
   company: string | null;
   role: string | null;
   met_where: string | null;
+  /** The wiki's short summary of who they are. Null on a hand-made contact. */
+  bio: string | null;
   notes: string | null;
   priority: Priority;
   created_at: string;
@@ -89,8 +92,6 @@ export interface Contact {
 
   /** Source wiki entity, e.g. "rosa-delgado". Null when created by hand in the app. */
   wiki_slug?: string | null;
-  /** Fields a human edited here. Sync must never overwrite one of these. */
-  operator_set?: string[];
   wiki_synced_at?: string | null;
 }
 

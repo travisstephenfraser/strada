@@ -13,6 +13,11 @@ export function Input({ className, ...props }: ComponentProps<"input">) {
         // is where this app says what kind of thing it is.
         "aria-[invalid=true]:border-l-2 aria-[invalid=true]:border-[var(--invalid)]",
         "aria-[invalid=true]:bg-[var(--invalid-wash)]",
+        // A wiki-owned field reads as settled rather than broken: the value stays
+        // legible and the affordance goes away, which is the difference between "you
+        // cannot change this here" and "this input is malfunctioning".
+        "disabled:border-transparent disabled:bg-transparent disabled:px-0",
+        "disabled:text-[var(--ink-soft)] disabled:cursor-default",
         className,
       )}
       {...props}

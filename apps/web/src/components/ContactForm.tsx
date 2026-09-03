@@ -108,6 +108,16 @@ export function ContactForm({
 
   const isEdit = editing !== null;
 
+  /**
+   * A contact that came from the wiki has a read-only layer. The inputs are disabled
+   * rather than hidden: seeing the value and being told where it comes from explains
+   * the model, where an absent field would just look like a missing feature.
+   *
+   * Disabling is a courtesy, not the guarantee. The API refuses a changed wiki field
+   * with a 403, and a database trigger refuses it under that.
+   */
+  const fromWiki = Boolean(editing?.wiki_slug);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent aria-describedby={undefined}>
@@ -130,11 +140,21 @@ export function ContactForm({
               aria-invalid={Boolean(errors.name)}
               aria-describedby={errors.name ? "name-error" : undefined}
               onChange={(e) => set("name", e.target.value)}
+              disabled={fromWiki}
               // The one serif input in the app: it makes this feel like writing a name
               // rather than filling a field, and keeps "serif means proper noun" true.
               className="font-serif text-[1.25rem]"
             />
           </Field>
+
+          {fromWiki && (
+            <p className="-mt-2 text-[0.8125rem] leading-relaxed text-[var(--ink-faint)]">
+              Name, company, role and where you met come from your wiki page{" "}
+              <span className="text-[var(--brass-ink)]">{editing!.wiki_slug}</span> and
+              are refreshed on every sync. Edit the page to change them. Your notes and
+              priority below are yours; sync never touches them.
+            </p>
+          )}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Field id="company" label="Company" error={errors.company}>
@@ -143,6 +163,7 @@ export function ContactForm({
                 value={draft.company}
                 aria-invalid={Boolean(errors.company)}
                 onChange={(e) => set("company", e.target.value)}
+                disabled={fromWiki}
               />
             </Field>
             <Field id="role" label="Role" error={errors.role}>
@@ -151,6 +172,7 @@ export function ContactForm({
                 value={draft.role}
                 aria-invalid={Boolean(errors.role)}
                 onChange={(e) => set("role", e.target.value)}
+                disabled={fromWiki}
               />
             </Field>
           </div>
@@ -162,6 +184,7 @@ export function ContactForm({
               placeholder="Caffè Strada, after the Haas fireside"
               aria-invalid={Boolean(errors.met_where)}
               onChange={(e) => set("met_where", e.target.value)}
+              disabled={fromWiki}
             />
           </Field>
 
