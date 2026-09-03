@@ -39,6 +39,7 @@ Tests      135 automated (113 hermetic + 22 live)
 - [Grading evidence](#grading-evidence)
 - [Deployment](#deployment)
 - [Optional: wiki sync](#optional-wiki-sync)
+- [What went wrong, and what it changed](#what-went-wrong-and-what-it-changed)
 - [Known limitations and what I would do next](#known-limitations-and-what-i-would-do-next)
 
 ---
@@ -742,6 +743,115 @@ sync that looks like a successful one.
 
 No vault path or vault content is committed. Tests run against a synthetic fixture vault
 of invented people, and a test fails if any source file contains a vault path.
+
+---
+
+## What went wrong, and what it changed
+
+Nothing in the rubric asks for this section. It is here because the interesting part of
+building this was not the parts that worked, and because a README that reports only
+successes is evidence of editing rather than of engineering.
+
+Five failures, in the order they would matter to someone maintaining this. Each is what
+broke, why it was not caught, and what changed as a result.
+
+### Real people's data reached a public repository
+
+The screenshot demonstrating wiki sync was taken against the real vault. Eight rows were
+visible; seven were real people, with names, employers, roles and where they were met.
+It was committed, and the repository was then made public before anyone noticed. GitHub's
+traffic API recorded zero views, zero clones and zero forks for that day, so there is no
+evidence anyone fetched it — but that is luck, not a control, and the exposure window was
+never measured precisely enough to be worth quoting.
+
+Why it was not caught: the image was never referenced from the README. Every review pass
+read the prose, and an unreferenced file is not in the prose. `npm run check:secrets`
+passed the whole time and was right to — it hunts for credentials, and this was
+disclosure of other people's information, which no grep for `npg_` will ever find.
+
+What changed: the repository was made private, every commit was rewritten to purge the
+image and the names from history, and the result was verified from a fresh clone. The
+test account was rebuilt on a fictional cast, and every screenshot in this README is shot
+against that account. The durable fix is upstream of any scanner — demo data is fictional,
+so a screenshot cannot leak something real.
+
+The residue is honest: rewriting history does not unpublish anything that was already
+fetched, and unreachable objects stay addressable by SHA until the host garbage-collects
+them.
+
+### A secret check that could not fail, then one that always failed
+
+`scripts/check-no-secrets.sh` has been wrong twice, in opposite directions. Version one
+grepped the built bundle for server-only variable *names*. Vite inlines values, not
+identifiers, so the string it searched for could never appear: the check passed
+unconditionally and proved nothing.
+
+Version two searched for the *values* instead, and included `NEON_AUTH_BASE_URL` in the
+list. That URL is the sign-in endpoint the browser has to call and ships on purpose as
+`NEXT_PUBLIC_NEON_AUTH_URL`, so the check failed on every correct build — and it went
+unnoticed because it only fails when run with the API's environment loaded, which is not
+how anyone runs it casually.
+
+A check that cannot fail and a check that always fails are the same check. Both teach you
+to stop reading the output.
+
+What changed: the current version checks the thing the list was reaching for — a secret's
+value copied into a `NEXT_PUBLIC_`/`VITE_` name, which Vite would then inline by design —
+and it is verified in both directions, passing on the real configuration and failing when
+a secret is deliberately planted in a public variable. The three mechanisms it sits
+alongside are in [Secrets](#secrets-publishable-versus-server-only).
+
+### Dropping a column took the live API down
+
+Migration 003 drops `operator_set`. PostgREST caches each table's column list, so it kept
+generating `SELECT`s naming a column that no longer existed and Postgres answered `42703
+undefined column`. Every read through the deployed API failed while the database itself
+was entirely healthy.
+
+Two things made it worse than it needed to be. `notify pgrst, 'reload schema'` looked like
+it worked — reads recovered for a minute, then failed again, because only some instances
+had reloaded, and an intermittent fault is much easier to misdiagnose than a constant one.
+And the first sampling of the deployed API printed only status codes, so a `200` that was
+in fact a stale-cache flap read as a recovery.
+
+What changed: `neon data-api refresh-schema` fixed it in one call and is now the
+documented step, printed by `db/migrate.mjs` after every migration with an explicit
+warning for drops and renames. The deployment order is written down too — see
+[Deployment](#deployment) — deploy the code, then migrate, then refresh, because the
+reverse breaks every edit in the live app for the length of a deploy.
+
+### A passing test hid a broken trigger
+
+The first version of the wiki-layer trigger built its list of changed columns with
+`changed := changed || 'name'`, which makes Postgres parse the right operand as an array
+literal. The trigger raised `malformed array literal` instead of the intended rejection.
+
+The test asserted that the write was refused. It *was* refused — by a syntax error. The
+assertion passed on a completely broken trigger.
+
+What changed: `array_append`, and more importantly the test now asserts on the sqlstate
+and the message text, so a different error cannot pass as the right one. Both guards in
+this project were then deliberately broken to confirm the tests notice: dropping the
+trigger fails 6 of its 10 assertions, and disabling RLS fails 8 of 12.
+
+That second experiment found something else worth keeping. One assertion stayed green
+with RLS switched off — not because it was weak, but because an earlier assertion in the
+same file issues an unfiltered `DELETE`, which with RLS off had already removed the row it
+looks for. A test can be made vacuous by a test that runs before it.
+
+### Every contact came back "high"
+
+The first live extraction marked all eleven people `high`. Priority drives sorting and
+filtering, so the feature was silently useless, and a field with no variance carries no
+information at all. The full write-up is in
+[A finding worth recording](#a-finding-worth-recording); the short version is that the
+prompt asked something too vague to be a measurement, and the fix was in the prompt rather
+than the data.
+
+The design changed as well, not just the prompt. `priority` is now seeded once and then
+owned by the operator, because it is a judgement about a relationship rather than a fact
+about a person — and a signal known to be weak should not be re-asserted over a human's
+correction on every run.
 
 ---
 
