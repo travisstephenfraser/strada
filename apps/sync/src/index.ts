@@ -120,7 +120,7 @@ async function main(): Promise<void> {
   if (records.length === 0) {
     console.log("\nNothing to send.");
     console.log(renderReport(
-      { dryRun: opts.dryRun, created: [], updated: [], unchanged: [], protected: [], orphaned: [], failed: [] },
+      { dryRun: opts.dryRun, created: [], updated: [], unchanged: [], orphaned: [], failed: [] },
       excluded,
       skipped,
     ));

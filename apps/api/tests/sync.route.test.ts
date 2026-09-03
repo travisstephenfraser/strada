@@ -35,12 +35,12 @@ function contact(over: Partial<Contact> = {}): Contact {
     company: null,
     role: null,
     met_where: null,
+    bio: null,
     notes: null,
     priority: "medium",
     created_at: "2026-09-01T00:00:00Z",
     updated_at: "2026-09-01T00:00:00Z",
     wiki_slug: null,
-    operator_set: [],
     wiki_synced_at: null,
     ...over,
   };
@@ -52,7 +52,7 @@ const record = {
   company: "Example Lab",
   role: "Researcher",
   met_where: "a seminar",
-  notes: "Ask about the evaluation work.",
+  bio: "Runs the evaluation group.",
   priority: "high" as const,
 };
 
@@ -133,40 +133,54 @@ describe("POST /api/contacts/sync", () => {
   });
 });
 
-describe("a human's edits survive a sync", () => {
-  it("never writes a field the operator owns, and says so in the report", async () => {
+describe("sync cannot reach the operator's layer", () => {
+  it("writes no operator-owned column when it updates the wiki layer", async () => {
     const existing = contact({
       id: "c-9",
       wiki_slug: "sample-person",
       notes: "My own note.",
-      operator_set: ["notes"],
+      priority: "low",
     });
     const up = upstreamWith([existing]);
 
-    const res = await request(makeApp(up))
+    await request(makeApp(up))
       .post("/api/contacts/sync")
       .set(AUTH)
       .send({ records: [record] });
 
     const [, init] = writesTo(up)[0]!;
     const body = JSON.parse(init.body);
+    // Asserting on the exact body, not on the absence of an error: a write of
+    // `notes: null` would pass a weaker "my text survived" check on this mock.
     expect(body).not.toHaveProperty("notes");
+    expect(body).not.toHaveProperty("priority");
     expect(body.company).toBe("Example Lab");
-
-    expect(res.body.report.protected).toEqual([
-      { wiki_slug: "sample-person", fields: ["notes"] },
-    ]);
   });
 
-  it("never rewrites operator_set itself", async () => {
-    const up = upstreamWith([
-      contact({ id: "c-9", wiki_slug: "sample-person", operator_set: ["notes"] }),
-    ]);
-    await request(makeApp(up)).post("/api/contacts/sync").set(AUTH).send({ records: [record] });
+  it("seeds priority on create, and never again", async () => {
+    const fresh = upstreamWith([]);
+    await request(makeApp(fresh)).post("/api/contacts/sync").set(AUTH).send({ records: [record] });
+    expect(JSON.parse(writesTo(fresh)[0]![1].body).priority).toBe("high");
 
-    for (const [, init] of writesTo(up)) {
-      expect(JSON.parse(init.body)).not.toHaveProperty("operator_set");
+    // Same record, same wiki priority, but the operator has since demoted them.
+    const later = upstreamWith([
+      contact({ id: "c-9", wiki_slug: "sample-person", priority: "low" }),
+    ]);
+    await request(makeApp(later)).post("/api/contacts/sync").set(AUTH).send({ records: [record] });
+    for (const [, init] of writesTo(later)) {
+      expect(JSON.parse(init.body)).not.toHaveProperty("priority");
     }
+  });
+
+  it("refuses a record carrying notes rather than quietly dropping it", async () => {
+    // A prompt that starts emitting operator text should fail loudly, not be ignored.
+    const res = await request(makeApp(upstream))
+      .post("/api/contacts/sync")
+      .set(AUTH)
+      .send({ records: [{ ...record, notes: "extraction should not produce this" }] });
+
+    expect(res.status).toBe(400);
+    expect(writesTo(upstream)).toHaveLength(0);
   });
 });
 
@@ -179,7 +193,7 @@ describe("the report distinguishes outcomes rather than counting them", () => {
         company: "Example Lab",
         role: "Researcher",
         met_where: "a seminar",
-        notes: "Ask about the evaluation work.",
+        bio: "Runs the evaluation group.",
         priority: "high",
       }),
     ]);
@@ -236,22 +250,67 @@ describe("the report distinguishes outcomes rather than counting them", () => {
   });
 });
 
-describe("editing in the app claims fields for the human", () => {
-  it("adds the edited field to operator_set, additively", async () => {
-    // A real uuid: the route's id guard rejects anything else before it reaches the
-    // database, which is exactly what an earlier version of this test tripped over.
-    const id = "3f2504e0-4f89-41d3-9a0c-0305e82c3301";
-    const up = upstreamWith([
-      contact({ id, wiki_slug: "sample-person", operator_set: ["priority"] }),
+describe("the app cannot reach the wiki layer", () => {
+  // A real uuid: the route's id guard rejects anything else before it reaches the
+  // database, which is exactly what an earlier version of this test tripped over.
+  const id = "3f2504e0-4f89-41d3-9a0c-0305e82c3301";
+  const linked = () =>
+    upstreamWith([
+      contact({
+        id,
+        wiki_slug: "sample-person",
+        name: "Sample Person",
+        company: "Example Lab",
+        role: "Researcher",
+        met_where: "a seminar",
+        bio: "Runs the evaluation group.",
+      }),
     ]);
 
-    await request(makeApp(up))
+  it("refuses a changed wiki field with a 403 that names it, and writes nothing", async () => {
+    const up = linked();
+    const res = await request(makeApp(up))
       .patch(`/api/contacts/${id}`)
       .set(AUTH)
-      .send({ notes: "Typed by hand." });
+      .send({ company: "Somewhere Else" });
 
-    const patch = writesTo(up).find(([, i]) => i.method === "PATCH")!;
-    const body = JSON.parse(patch[1].body);
-    expect(body.operator_set.toSorted()).toEqual(["notes", "priority"]);
+    expect(res.status).toBe(403);
+    expect(res.body.fields).toHaveProperty("company");
+    expect(writesTo(up).some(([, i]) => i.method === "PATCH")).toBe(false);
+  });
+
+  it("accepts an edit that only restates the wiki fields unchanged", async () => {
+    // The edit form submits every field, so this is what an ordinary notes edit looks
+    // like on the wire. Rejecting on presence rather than on change would 403 here and
+    // make wiki-linked contacts uneditable.
+    const up = linked();
+    const res = await request(makeApp(up))
+      .patch(`/api/contacts/${id}`)
+      .set(AUTH)
+      .send({
+        name: "Sample Person",
+        company: "Example Lab",
+        role: "Researcher",
+        met_where: "a seminar",
+        notes: "Coffee on Thursday.",
+        priority: "low",
+      });
+
+    expect(res.status).toBe(200);
+    const body = JSON.parse(writesTo(up).find(([, i]) => i.method === "PATCH")![1].body);
+    expect(body.notes).toBe("Coffee on Thursday.");
+    expect(body.priority).toBe("low");
+  });
+
+  it("lets a hand-made contact change every field, since it has no wiki layer", async () => {
+    const up = upstreamWith([contact({ id, wiki_slug: null, company: "Old Co" })]);
+    const res = await request(makeApp(up))
+      .patch(`/api/contacts/${id}`)
+      .set(AUTH)
+      .send({ company: "New Co" });
+
+    expect(res.status).toBe(200);
+    expect(JSON.parse(writesTo(up).find(([, i]) => i.method === "PATCH")![1].body).company)
+      .toBe("New Co");
   });
 });

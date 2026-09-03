@@ -1,11 +1,9 @@
 import { Router, type Request, type Response } from "express";
 import {
-  SYNCABLE_FIELDS,
   fieldErrors,
   planSync,
   syncRequestSchema,
   type Contact,
-  type MergeOutcome,
 } from "@strada/shared";
 import { DataApiClient, mapUpstreamError } from "../dataApi.js";
 
@@ -54,8 +52,6 @@ export function createSyncRouter(dataApi: DataApiClient): Router {
       created: [] as string[],
       updated: [] as { wiki_slug: string; fields: string[] }[],
       unchanged: [] as string[],
-      /** The wiki wanted these fields and a human owns them. Never silent. */
-      protected: [] as { wiki_slug: string; fields: string[] }[],
       orphaned: plan.orphaned.map((o) => ({ wiki_slug: o.wiki_slug, name: o.name })),
       failed: [] as { wiki_slug: string; error: string }[],
     };
@@ -63,8 +59,6 @@ export function createSyncRouter(dataApi: DataApiClient): Router {
     const syncedAt = new Date().toISOString();
 
     for (const outcome of plan.outcomes) {
-      collectProtected(outcome, report.protected);
-
       if (outcome.kind === "unchanged") {
         report.unchanged.push(outcome.wiki_slug);
         continue;
@@ -95,7 +89,8 @@ export function createSyncRouter(dataApi: DataApiClient): Router {
               method: "PATCH",
               table: "contacts",
               filters: { id: `eq.${outcome.id}` },
-              // operator_set is deliberately absent: sync never edits who owns a field.
+              // Only wiki-owned columns are in `values`, and `wiki_synced_at` moving is
+              // what tells the database's trigger this write came from sync.
               body: { ...outcome.values, wiki_synced_at: syncedAt },
               prefer: ["max-affected=1", "handling=strict"],
             });
@@ -117,23 +112,4 @@ export function createSyncRouter(dataApi: DataApiClient): Router {
   });
 
   return router;
-}
-
-function collectProtected(
-  outcome: MergeOutcome,
-  into: { wiki_slug: string; fields: string[] }[],
-): void {
-  if (outcome.kind === "create") return;
-  if (outcome.protectedFields.length === 0) return;
-  into.push({ wiki_slug: outcome.wiki_slug, fields: [...outcome.protectedFields] });
-}
-
-/**
- * Which syncable fields a PATCH body is claiming for the human.
- *
- * Called by the normal edit route so that editing a contact in the app marks exactly
- * the fields touched — and nothing else — as operator-owned.
- */
-export function claimedFields(body: Record<string, unknown>): string[] {
-  return SYNCABLE_FIELDS.filter((field) => field in body);
 }

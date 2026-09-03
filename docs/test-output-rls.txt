@@ -1,27 +1,43 @@
 
+> strada@1.0.0 test:rls
+> npm run build:shared && node --env-file-if-exists=.env.local ./node_modules/vitest/vitest.mjs run --config vitest.rls.config.mts --reporter=verbose
 
 
+> strada@1.0.0 build:shared
+> npm run build --workspace @strada/shared
 
 
+> @strada/shared@1.0.0 build
+> tsc -p tsconfig.json
 
 
  RUN  v4.1.11 /Users/travis/Developer/pepeclass/assign1
 
- ✓ tests/rls/two-account.test.ts > User A's row, as seen by User A (positive control) > A can read the row A created 94ms
- ✓ tests/rls/two-account.test.ts > User B cannot SEE User A's contacts > B's unfiltered read of the whole table does not contain A's row 31ms
- ✓ tests/rls/two-account.test.ts > User B cannot SEE User A's contacts > B cannot read A's row even when asking for it by id 31ms
+ ✓ tests/rls/wiki-layer.test.ts > the wiki layer is read-only to an ordinary write > refuses a change to name on a wiki-linked row 29ms
+ ✓ tests/rls/wiki-layer.test.ts > the wiki layer is read-only to an ordinary write > refuses a change to company on a wiki-linked row 29ms
+ ✓ tests/rls/wiki-layer.test.ts > the wiki layer is read-only to an ordinary write > refuses a change to role on a wiki-linked row 31ms
+ ✓ tests/rls/wiki-layer.test.ts > the wiki layer is read-only to an ordinary write > refuses a change to met_where on a wiki-linked row 30ms
+ ✓ tests/rls/wiki-layer.test.ts > the wiki layer is read-only to an ordinary write > refuses a change to bio on a wiki-linked row 98ms
+ ✓ tests/rls/wiki-layer.test.ts > the wiki layer is read-only to an ordinary write > leaves the value in place after a refusal 59ms
+ ✓ tests/rls/wiki-layer.test.ts > everything else still works > allows an edit that restates wiki fields without changing them 30ms
+ ✓ tests/rls/wiki-layer.test.ts > everything else still works > allows the operator's own layer to change freely 30ms
+ ✓ tests/rls/wiki-layer.test.ts > everything else still works > leaves a hand-made contact fully editable 29ms
+ ✓ tests/rls/wiki-layer.test.ts > the limit of this guarantee, stated rather than hidden > lets a caller who sets wiki_synced_at through: this is not a security boundary 61ms
+ ✓ tests/rls/two-account.test.ts > User A's row, as seen by User A (positive control) > A can read the row A created 32ms
+ ✓ tests/rls/two-account.test.ts > User B cannot SEE User A's contacts > B's unfiltered read of the whole table does not contain A's row 32ms
+ ✓ tests/rls/two-account.test.ts > User B cannot SEE User A's contacts > B cannot read A's row even when asking for it by id 30ms
  ✓ tests/rls/two-account.test.ts > User B cannot CHANGE User A's contacts > B's update of A's row affects nothing 61ms
- ✓ tests/rls/two-account.test.ts > User B cannot CHANGE User A's contacts > B's delete of A's row removes nothing 61ms
+ ✓ tests/rls/two-account.test.ts > User B cannot CHANGE User A's contacts > B's delete of A's row removes nothing 126ms
  ✓ tests/rls/two-account.test.ts > User B cannot CHANGE User A's contacts > B's unfiltered delete cannot reach A's rows 87ms
- ✓ tests/rls/two-account.test.ts > Ownership cannot be handed to another user (WITH CHECK) > A cannot create a row owned by B 30ms
- ✓ tests/rls/two-account.test.ts > Ownership cannot be handed to another user (WITH CHECK) > A cannot move their own row to B 60ms
- ✓ tests/rls/two-account.test.ts > The wiki-sync columns do not weaken ownership > B cannot read A's wiki linkage 59ms
- ✓ tests/rls/two-account.test.ts > The wiki-sync columns do not weaken ownership > B cannot claim a field on A's row by writing operator_set 128ms
- ✓ tests/rls/two-account.test.ts > An unauthenticated caller reaches nothing > the Data API refuses a request with no token 27ms
- ✓ tests/rls/two-account.test.ts > An unauthenticated caller reaches nothing > the Data API refuses a forged token 27ms
+ ✓ tests/rls/two-account.test.ts > Ownership cannot be handed to another user (WITH CHECK) > A cannot create a row owned by B 32ms
+ ✓ tests/rls/two-account.test.ts > Ownership cannot be handed to another user (WITH CHECK) > A cannot move their own row to B 76ms
+ ✓ tests/rls/two-account.test.ts > The wiki-sync columns do not weaken ownership > B cannot read A's wiki linkage 60ms
+ ✓ tests/rls/two-account.test.ts > The wiki-sync columns do not weaken ownership > B cannot write A's wiki layer, sync stamp or not 62ms
+ ✓ tests/rls/two-account.test.ts > An unauthenticated caller reaches nothing > the Data API refuses a request with no token 26ms
+ ✓ tests/rls/two-account.test.ts > An unauthenticated caller reaches nothing > the Data API refuses a forged token 28ms
 
- Test Files  1 passed (1)
-      Tests  12 passed (12)
-   Start at  22:59:02
-   Duration  1.36s (transform 11ms, setup 0ms, import 16ms, tests 1.29s, environment 0ms)
+ Test Files  2 passed (2)
+      Tests  22 passed (22)
+   Start at  08:23:07
+   Duration  2.16s (transform 14ms, setup 0ms, import 23ms, tests 2.00s, environment 0ms)
 

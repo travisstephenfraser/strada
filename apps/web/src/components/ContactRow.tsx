@@ -127,14 +127,35 @@ export function ContactRow({
       </div>
 
       {open && (
-        <div className="px-5 pb-4 pl-8">
-          {contact.notes ? (
-            <p className="max-w-[60ch] text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-[var(--ink-soft)]">
-              {contact.notes}
-            </p>
-          ) : (
-            <p className="text-[0.8125rem] text-[var(--ink-faint)]">No notes yet.</p>
+        <div className="grid gap-3 px-5 pb-4 pl-8">
+          {/* The wiki's account of the person, above the operator's own. Set in the
+              same faint ink as the meta line, because it is reference material: it
+              cannot be edited here, and it is refreshed wholesale by the next sync. */}
+          {contact.bio && (
+            <div className="max-w-[60ch]">
+              <p className="eyebrow mb-1 text-[var(--ink-faint)]">
+                from your wiki
+              </p>
+              <p className="text-[0.875rem] leading-relaxed text-[var(--ink-faint)]">
+                {contact.bio}
+              </p>
+            </div>
           )}
+
+          <div className="max-w-[60ch]">
+            {contact.bio && (
+              <p className="eyebrow mb-1 text-[var(--ink-faint)]">your notes</p>
+            )}
+            {contact.notes ? (
+              <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap text-[var(--ink-soft)]">
+                {contact.notes}
+              </p>
+            ) : (
+              <p className="text-[0.8125rem] text-[var(--ink-faint)]">
+                No notes yet.
+              </p>
+            )}
+          </div>
         </div>
       )}
     </article>

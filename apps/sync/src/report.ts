@@ -33,10 +33,6 @@ export function renderReport(
   );
   section("unchanged", report.unchanged);
   section(
-    "kept your edits (wiki wanted to change these; you own them)",
-    report.protected.map((p) => `${p.wiki_slug}  ✋ ${p.fields.join(", ")}`),
-  );
-  section(
     "excluded by visibility rules",
     excluded.map((e) => `${e.slug}  (${e.reason})`),
   );

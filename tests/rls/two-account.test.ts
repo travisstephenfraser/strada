@@ -248,7 +248,7 @@ describe("Ownership cannot be handed to another user (WITH CHECK)", () => {
 });
 
 describe("The wiki-sync columns do not weaken ownership", () => {
-  // Migration 002 added wiki_slug, operator_set and wiki_synced_at. They are covered by
+  // Migrations 002 and 003 added wiki_slug, wiki_synced_at and bio. They are covered by
   // the same four policies as everything else, and this asserts that rather than
   // trusting that adding columns is automatically safe.
   it("B cannot read A's wiki linkage", async () => {
@@ -257,24 +257,31 @@ describe("The wiki-sync columns do not weaken ownership", () => {
       body: JSON.stringify({ wiki_slug: `probe-${Date.now()}` }),
     });
 
-    const res = await data(B.token, "/contacts?select=id,wiki_slug,operator_set");
+    const res = await data(B.token, "/contacts?select=id,wiki_slug,bio");
     expect(res.status).toBe(200);
     const rows = (await res.json()) as { id: string }[];
     expect(rows.map((r) => r.id)).not.toContain(rowId);
   });
 
-  it("B cannot claim a field on A's row by writing operator_set", async () => {
+  it("B cannot write A's wiki layer, sync stamp or not", async () => {
+    // The wiki-layer trigger is not an ownership rule, so this checks that RLS still
+    // does the ownership job for the columns the trigger governs. B supplies a
+    // wiki_synced_at, which is exactly what would satisfy the trigger — RLS has to be
+    // what stops this, and it is.
     const res = await data(B.token, `/contacts?id=eq.${rowId}`, {
       method: "PATCH",
       headers: { Prefer: "return=representation" },
-      body: JSON.stringify({ operator_set: ["name", "notes"] }),
+      body: JSON.stringify({
+        bio: "written by B",
+        wiki_synced_at: new Date().toISOString(),
+      }),
     });
     expect([200, 204]).toContain(res.status);
     if (res.status === 200) expect(await res.json()).toEqual([]);
 
-    const check = await data(A.token, `/contacts?id=eq.${rowId}`);
-    const [row] = (await check.json()) as { operator_set: string[] }[];
-    expect(row!.operator_set).toEqual([]);
+    const check = await data(A.token, `/contacts?id=eq.${rowId}&select=bio`);
+    const [row] = (await check.json()) as { bio: string | null }[];
+    expect(row!.bio).not.toBe("written by B");
   });
 });
 
