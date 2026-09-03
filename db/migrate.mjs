@@ -119,7 +119,13 @@ try {
   if (pending.length > 0) {
     console.log(
       "\n  Done. Now refresh the Data API schema cache:\n" +
-        "  Neon Console -> your project -> Data API -> Refresh schema cache\n" +
+        "    neon data-api refresh-schema --project-id <id> --branch <branch> --database <db>\n" +
+        "  (or Neon Console -> your project -> Data API -> Refresh schema cache)\n" +
+        "\n  Do NOT skip this after a migration that DROPS or RENAMES a column.\n" +
+        "  PostgREST caches the column list and keeps SELECTing the old one, so live\n" +
+        "  reads fail with 42703 until the cache is refreshed. `notify pgrst,\n" +
+        "  'reload schema'` is not a reliable substitute — it reached only some\n" +
+        "  instances and reads flapped between 200 and 502 for several minutes.\n" +
         "  Until you do, PostgREST answers PGRST205 'table not found'.\n",
     );
   }

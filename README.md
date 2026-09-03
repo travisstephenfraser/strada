@@ -339,8 +339,25 @@ npm run dev:web                # http://localhost:5177
 Requires Node 24 or newer. There is no `psql` dependency — migrations run through the
 `pg` driver via `node db/migrate.mjs`.
 
-After any migration, refresh the Data API schema cache (Neon Console → Data API → Refresh
-schema cache). PostgREST answers `PGRST205 table not found` until you do.
+After any migration, refresh the Data API schema cache:
+
+```bash
+neon data-api refresh-schema --project-id <id> --branch <branch> --database <db>
+```
+
+For a migration that only ADDS things, skipping this means PostgREST answers
+`PGRST205 table not found` for anything new. For one that **drops or renames a column it
+is a live outage**, and migration 003 caused one: PostgREST had `operator_set` in its
+cached column list, kept naming it in the `SELECT` it generates, and Postgres answered
+`42703 undefined column` — so every read through the API failed while the database itself
+was perfectly healthy. `notify pgrst, 'reload schema'` is not a reliable substitute; it
+reached only some instances, and reads flapped between 200 and 502 for several minutes
+before the CLI refresh fixed it in one shot.
+
+The ordering rule that follows: **deploy the code first, then migrate, then refresh the
+cache immediately.** Deploying first costs nothing here — the new code tolerates the old
+schema, and only the local sync CLI is affected — whereas migrating first breaks every
+edit in the live app for the length of a deploy.
 
 ---
 

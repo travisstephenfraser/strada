@@ -64,10 +64,14 @@ export function ContactRow({
               ◆
             </span>
           )}
+          {/* Actions occupy this corner once the row is hovered or open, so the
+              priority label yields to them rather than being overprinted by them. */}
           <span
             className={cn(
-              "eyebrow",
+              "eyebrow transition-opacity duration-[140ms]",
               ghost ? "text-[var(--ghost)]" : "text-[var(--ink-faint)]",
+              !ghost && "group-hover:opacity-0 group-focus-within:opacity-0",
+              !ghost && open && "opacity-0",
             )}
           >
             {contact.priority}
